@@ -94,6 +94,21 @@ Rules:
 
 Result: 26 files in `composeResources/drawable/` (17 SVG + 9 PNG).
 
+**Correction found during implementation:** rule 1 ("prefer SVG when both
+exist") assumed the SVGs were lightweight vector icons. Inspecting the
+actual files showed 8 of the 16 SVG/PNG-overlap images are not vector
+art at all — they're multi-MB stock photos wrapped in an `<svg>` tag
+via an embedded `<image>` element (`alert`, `alert_red`, `hospitals`,
+`location`, `onboarding_screen_background`, `phone`, `rejected`,
+`success`; e.g. `hospitals.svg` was 9.6 MB vs. a 33 KB PNG for the same
+image). Those 8 were switched to PNG instead, cutting total asset
+weight from ~40 MB to ~8.5 MB. The remaining 8 overlap images
+(`back_arrow`, `device_location`, `empanelled_hospitals`,
+`in_progress_hospitals`, `location_accuracy`, `login`, `right_arrow`,
+`zoom`) are genuine small vector paths and stayed as SVG, along with
+`image.svg` (no PNG alternative exists). Final mix: **9 SVG + 17 PNG**
+(counts flip from the original rule, total file count unchanged at 26).
+
 ## Verification
 
 `./gradlew :shared:compileKotlin :androidApp:assembleDebug` (Android +
