@@ -1,0 +1,10 @@
+package org.nha.project.core.ui.theme
+
+import androidx.compose.ui.graphics.Color
+
+val HemPrimary = Color(0xFF0B6E4F)
+val HemOnPrimary = Color(0xFFFFFFFF)
+val HemSecondary = Color(0xFF1B5E20)
+val HemBackground = Color(0xFFF7F9F8)
+val HemSurface = Color(0xFFFFFFFF)
+val HemError = Color(0xFFB3261E)

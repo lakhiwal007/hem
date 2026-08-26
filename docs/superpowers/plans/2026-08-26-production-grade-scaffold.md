@@ -1082,20 +1082,22 @@ package org.nha.project
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import org.koin.compose.KoinContext
 import org.nha.project.core.navigation.AppNavHost
 import org.nha.project.core.ui.theme.HemTheme
 
 @Composable
 @Preview
 fun App() {
-    KoinContext {
-        HemTheme {
-            AppNavHost()
-        }
+    HemTheme {
+        AppNavHost()
     }
 }
 ```
+
+Note: an earlier draft of this file wrapped the content in `KoinContext { ... }`
+(from `org.koin.compose`). Building with it produced a deprecation warning —
+in Koin 4.2.1, `startKoin()` already wires up the Compose context, so
+`KoinContext` is redundant. Removed.
 
 - [ ] **Step 7: Full build verification**
 
