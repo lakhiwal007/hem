@@ -635,13 +635,17 @@ import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.dsl.KoinAppDeclaration
 
-fun initKoin(platformDeclaration: KoinAppDeclaration? = null, extraModules: List<Module> = emptyList()) {
+fun initKoin(extraModules: List<Module> = emptyList(), platformDeclaration: KoinAppDeclaration? = null) {
     startKoin {
         platformDeclaration?.invoke(this)
         modules(appModules + extraModules)
     }
 }
 ```
+
+`platformDeclaration` must be the *last* parameter — Task 6 calls this with a
+trailing lambda (`initKoin { androidLogger(); androidContext(...) }`), and
+Kotlin's trailing-lambda syntax binds to whichever parameter is last.
 
 - [ ] **Step 6: Verify Android side compiles (iOS side is not compiled on this machine)**
 
