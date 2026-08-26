@@ -10,10 +10,11 @@ import org.koin.dsl.module
 import org.nha.project.core.storage.DATA_STORE_FILE_NAME
 import org.nha.project.core.storage.createDataStore
 
-actual val platformModule: Module = module {
-    single<HttpClientEngine> { OkHttp.create() }
-    single<DataStore<Preferences>> {
-        val context = get<Context>()
-        createDataStore { context.filesDir.resolve(DATA_STORE_FILE_NAME).absolutePath }
+actual val platformModule: Module =
+    module {
+        single<HttpClientEngine> { OkHttp.create() }
+        single<DataStore<Preferences>> {
+            val context = get<Context>()
+            createDataStore { context.filesDir.resolve(DATA_STORE_FILE_NAME).absolutePath }
+        }
     }
-}

@@ -10,9 +10,10 @@ import org.nha.project.core.storage.DATA_STORE_FILE_NAME
 import org.nha.project.core.storage.createDataStore
 import platform.Foundation.NSHomeDirectory
 
-actual val platformModule: Module = module {
-    single<HttpClientEngine> { Darwin.create() }
-    single<DataStore<Preferences>> {
-        createDataStore { NSHomeDirectory() + "/$DATA_STORE_FILE_NAME" }
+actual val platformModule: Module =
+    module {
+        single<HttpClientEngine> { Darwin.create() }
+        single<DataStore<Preferences>> {
+            createDataStore { NSHomeDirectory() + "/$DATA_STORE_FILE_NAME" }
+        }
     }
-}

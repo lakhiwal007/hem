@@ -1,0 +1,13 @@
+root = true
+
+[*.{kt,kts}]
+indent_size = 4
+indent_style = space
+max_line_length = 120
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# Compose Multiplatform generates Res.kt / accessor files under build/generated
+# with names ktlint's Gradle plugin can't be reliably told to skip (see
+# https://github.com/JLLeitschuh/ktlint-gradle/issues/751) — disable ktlint here instead.
+[**/build/generated/**.kt]
+ktlint = disabled

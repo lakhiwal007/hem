@@ -1116,22 +1116,60 @@ git commit -m "feat: add feature placeholder screens wired into navigation, repl
 ### Task 9: ktlint and final cleanup
 
 **Files:**
+- Create: `.editorconfig`
 - Modify: `README.md`
 
 **Interfaces:**
 - None (final polish task).
 
-- [ ] **Step 1: Run ktlint format across the project**
+- [ ] **Step 1: Create `.editorconfig` with the Compose naming exception and generated-source exclusion**
+
+```ini
+root = true
+
+[*.{kt,kts}]
+indent_size = 4
+indent_style = space
+max_line_length = 120
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# Compose Multiplatform generates Res.kt / accessor files under build/generated
+# with names ktlint's Gradle plugin can't be reliably told to skip (see
+# https://github.com/JLLeitschuh/ktlint-gradle/issues/751) — disable ktlint here instead.
+[**/build/generated/**.kt]
+ktlint = disabled
+```
+
+Without this, `ktlintFormat` fails two different ways: (1) `@Composable`
+functions are PascalCase by convention (`App`, `HemTheme`,
+`PlaceholderScreen`) and ktlint's standard naming rule doesn't know to
+exempt them without this editorconfig property; (2) ktlint's Gradle-plugin
+`filter{}` block for excluding a directory is a long-standing, still-open
+upstream bug (multiple issues, e.g. JLLeitschuh/ktlint-gradle#751) — it
+silently does nothing, so generated `Res.kt`/resource-accessor files under
+`build/generated` get linted as if they were hand-written source and fail
+on their own generated names. The editorconfig path-glob section is honored
+directly by ktlint's core engine (not the flaky Gradle plugin filter) and
+reliably excludes them.
+
+Also add, right above `fun MainViewController()` in
+`shared/src/iosMain/kotlin/org/nha/project/MainViewController.kt`:
+`@Suppress("ktlint:standard:function-naming")` — this function isn't
+`@Composable` (it's the standard KMP/iOS entry-point factory convention,
+predates this plan), so it needs its own narrow suppression rather than a
+project-wide rule change.
+
+- [ ] **Step 2: Run ktlint format across the project**
 
 Run: `./gradlew ktlintFormat`
 Expected: `BUILD SUCCESSFUL`. Review the diff it produces (formatting-only changes) before committing.
 
-- [ ] **Step 2: Run ktlint check to confirm a clean baseline**
+- [ ] **Step 3: Run ktlint check to confirm a clean baseline**
 
 Run: `./gradlew ktlintCheck`
 Expected: `BUILD SUCCESSFUL` with no violations reported.
 
-- [ ] **Step 3: Update `README.md` with the new structure**
+- [ ] **Step 4: Update `README.md` with the new structure**
 
 ```markdown
 This is a Kotlin Multiplatform project targeting Android, iOS.
@@ -1171,12 +1209,12 @@ Run `./gradlew ktlintFormat` before committing; CI (once configured) should run 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
 ```
 
-- [ ] **Step 4: Final full build verification**
+- [ ] **Step 5: Final full build verification**
 
 Run: `./gradlew :androidApp:assembleDebug ktlintCheck`
 Expected: `BUILD SUCCESSFUL` for both.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add . -- ':!local.properties'

@@ -9,25 +9,26 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
-fun createHttpClient(engine: HttpClientEngine): HttpClient = HttpClient(engine) {
-    expectSuccess = false
+fun createHttpClient(engine: HttpClientEngine): HttpClient =
+    HttpClient(engine) {
+        expectSuccess = false
 
-    install(ContentNegotiation) {
-        json(
-            Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-                encodeDefaults = true
-            },
-        )
-    }
+        install(ContentNegotiation) {
+            json(
+                Json {
+                    ignoreUnknownKeys = true
+                    isLenient = true
+                    encodeDefaults = true
+                },
+            )
+        }
 
-    install(Logging) {
-        level = LogLevel.INFO
-    }
+        install(Logging) {
+            level = LogLevel.INFO
+        }
 
-    install(HttpTimeout) {
-        requestTimeoutMillis = 30_000
-        connectTimeoutMillis = 15_000
+        install(HttpTimeout) {
+            requestTimeoutMillis = 30_000
+            connectTimeoutMillis = 15_000
+        }
     }
-}

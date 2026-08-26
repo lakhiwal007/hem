@@ -5,6 +5,7 @@ import io.ktor.client.engine.HttpClientEngine
 import org.koin.dsl.module
 import org.nha.project.core.network.createHttpClient
 
-val networkModule = module {
-    single<HttpClient> { createHttpClient(get<HttpClientEngine>()) }
-}
+val networkModule =
+    module {
+        single<HttpClient> { createHttpClient(get<HttpClientEngine>()) }
+    }
