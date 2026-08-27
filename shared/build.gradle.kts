@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,6 +14,36 @@ plugins {
 
 room3 {
     schemaDirectory("$projectDir/schemas")
+}
+
+val generatedSecretsDir = layout.buildDirectory.dir("generated/secrets/kotlin")
+
+val generateAppSecrets by tasks.registering {
+    val localPropertiesFile = rootProject.file("local.properties")
+    val outputDir = generatedSecretsDir
+    inputs.file(localPropertiesFile).optional()
+    outputs.dir(outputDir)
+    doLast {
+        val props = Properties()
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { props.load(it) }
+        }
+        val idamKey = props.getProperty("IDAM_KEY", "")
+        val idamKey2 = props.getProperty("IDAM_KEY2", "")
+        val packageDir = outputDir.get().asFile.resolve("org/nha/project/core/secrets")
+        packageDir.mkdirs()
+        packageDir.resolve("AppSecrets.kt").writeText(
+            """
+            |package org.nha.project.core.secrets
+            |
+            |internal object AppSecrets {
+            |    const val IDAM_KEY: String = "$idamKey"
+            |    const val IDAM_KEY2: String = "$idamKey2"
+            |}
+            |
+            """.trimMargin(),
+        )
+    }
 }
 
 kotlin {
@@ -54,6 +85,9 @@ kotlin {
     }
 
     sourceSets {
+        getByName("commonMain") {
+            kotlin.srcDir(generateAppSecrets)
+        }
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.uiTooling)
@@ -82,6 +116,9 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.androidx.room3.runtime)
             implementation(libs.androidx.sqlite.bundled)
+            implementation(libs.cryptography.core)
+            implementation(libs.cryptography.provider.optimal)
+            implementation(libs.kotlinx.datetime)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
