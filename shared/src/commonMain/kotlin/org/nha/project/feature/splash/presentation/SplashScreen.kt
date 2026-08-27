@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
@@ -58,16 +59,24 @@ fun SplashScreen(onTimeout: () -> Unit) {
                 Modifier.size(140.dp),
             )
 
-            Image(
-                painter = painterResource(Res.drawable.pmjay_logo),
-                contentDescription = "PM-JAY",
+            Box(
                 modifier =
                     Modifier
-                        .height(
-                            140.dp,
-                        ).clip(CircleShape)
-                        .border(width = 1.dp, color = Color.White, shape = CircleShape),
-            )
+                        .size(140.dp)
+                        .clip(CircleShape)
+                        .border(width = 1.dp, color = Color.White, shape = CircleShape)
+                        .padding(5.dp),
+            ) {
+                Image(
+                    painter = painterResource(Res.drawable.pmjay_logo),
+                    contentDescription = "PM-JAY",
+                    modifier =
+                        Modifier
+                            .height(
+                                140.dp,
+                            ).clip(CircleShape),
+                )
+            }
         }
     }
 }

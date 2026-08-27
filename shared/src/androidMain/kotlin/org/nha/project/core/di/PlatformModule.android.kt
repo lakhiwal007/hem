@@ -5,6 +5,8 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import org.nha.project.core.location.AndroidLocationAccessChecker
+import org.nha.project.core.location.LocationAccessChecker
 import org.nha.project.core.storage.AppDatabase
 import org.nha.project.core.storage.getDatabaseBuilder
 import org.nha.project.core.storage.getRoomDatabase
@@ -16,4 +18,5 @@ actual val platformModule: Module =
             val context = get<Context>()
             getRoomDatabase(getDatabaseBuilder(context))
         }
+        single<LocationAccessChecker> { AndroidLocationAccessChecker(get()) }
     }

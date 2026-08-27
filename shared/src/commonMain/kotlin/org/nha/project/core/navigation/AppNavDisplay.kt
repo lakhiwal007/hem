@@ -9,6 +9,7 @@ import androidx.savedstate.serialization.SavedStateConfiguration
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import org.nha.project.core.location.LocationGuard
 import org.nha.project.feature.auth.presentation.LoginScreen
 import org.nha.project.feature.capture.presentation.CaptureScreen
 import org.nha.project.feature.hospital.presentation.HospitalListScreen
@@ -37,36 +38,38 @@ private val routeSavedStateConfig =
 fun AppNavDisplay() {
     val backStack = rememberNavBackStack(routeSavedStateConfig, Route.Splash)
 
-    NavDisplay(
-        backStack = backStack,
-        entryProvider =
-            entryProvider {
-                entry<Route.Splash> {
-                    SplashScreen(
-                        onTimeout = {
-                            backStack.clear()
-                            backStack.add(Route.LocationPermission)
-                        },
-                    )
-                }
-                entry<Route.LocationPermission> {
-                    LocationPermissionScreen(onContinue = { backStack.add(Route.Onboarding) })
-                }
-                entry<Route.Onboarding> {
-                    OnboardingScreen(onContinue = { backStack.add(Route.Login) })
-                }
-                entry<Route.Login> {
-                    LoginScreen(onContinue = { backStack.add(Route.HospitalList) })
-                }
-                entry<Route.HospitalList> {
-                    HospitalListScreen(onContinue = { backStack.add(Route.Capture) })
-                }
-                entry<Route.Capture> {
-                    CaptureScreen(onContinue = { backStack.add(Route.Status) })
-                }
-                entry<Route.Status> {
-                    HospitalStatusScreen()
-                }
-            },
-    )
+    LocationGuard(currentRoute = backStack.lastOrNull() as? Route) {
+        NavDisplay(
+            backStack = backStack,
+            entryProvider =
+                entryProvider {
+                    entry<Route.Splash> {
+                        SplashScreen(
+                            onTimeout = {
+                                backStack.clear()
+                                backStack.add(Route.LocationPermission)
+                            },
+                        )
+                    }
+                    entry<Route.LocationPermission> {
+                        LocationPermissionScreen(onContinue = { backStack.add(Route.Onboarding) })
+                    }
+                    entry<Route.Onboarding> {
+                        OnboardingScreen(onContinue = { backStack.add(Route.Login) })
+                    }
+                    entry<Route.Login> {
+                        LoginScreen(onContinue = { backStack.add(Route.HospitalList) })
+                    }
+                    entry<Route.HospitalList> {
+                        HospitalListScreen(onContinue = { backStack.add(Route.Capture) })
+                    }
+                    entry<Route.Capture> {
+                        CaptureScreen(onContinue = { backStack.add(Route.Status) })
+                    }
+                    entry<Route.Status> {
+                        HospitalStatusScreen()
+                    }
+                },
+        )
+    }
 }

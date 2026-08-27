@@ -7,4 +7,5 @@ val appModules: List<Module> =
         platformModule,
         networkModule,
         storageModule,
+        locationModule,
     )

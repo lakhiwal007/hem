@@ -4,5 +4,7 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>HEM needs your location to verify hospital sites during empanelment visits.</string>
 </dict>
 </plist>
