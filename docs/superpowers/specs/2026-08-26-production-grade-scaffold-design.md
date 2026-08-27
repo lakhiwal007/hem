@@ -27,8 +27,39 @@ findings, in case this needs redoing or debugging later:
   `Dispatchers.Default` for Room's `setQueryCoroutineContext`.
 - `rememberNavBackStack(Route.X)` (single-arg) compiles on Android but
   fails on iOS/Native — Nav3 requires an explicit `SavedStateConfiguration`
-  with a `polymorphic(Route::class) { subclass(...) }` entry per sealed
-  subtype to save/restore state without JVM reflection.
+  with a `polymorphic(...) { subclass(...) }` entry per sealed subtype to
+  save/restore state without JVM reflection. **Register it under
+  `NavKey::class`, not `Route::class`** — the runtime encoder
+  (`NavBackStackSerializer`) is statically typed to
+  `SnapshotStateList<NavKey>`, so a lookup keyed on `Route` compiles fine
+  everywhere (including both iOS targets) but throws at runtime on first
+  composition: `Serializer for subclass 'Splash' is not found in the
+  polymorphic scope of 'NavKey'`. This was caught only by actually
+  installing and running the APK, not by any compile/lint check.
+- **Compose Multiplatform's `painterResource` does not support raw
+  `.svg` files on Android at all** — throws
+  `IllegalStateException: Android platform doesn't support SVG format.`
+  (JetBrains/compose-multiplatform#4670, still open as of this writing).
+  Android needs either raster (PNG/JPG/WEBP) or its own XML
+  vector-drawable format; SVG only renders on iOS/Desktop/Web. This
+  reverses the "prefer SVG over PNG when both exist" rule from the
+  original asset migration above — **prefer PNG for any icon that will
+  render on Android**, and only use `.svg` for assets Android will never
+  load. All 9 remaining SVGs in this project were converted to PNG (8
+  recovered from the original `@3x` exports in the first commit;
+  `image.svg`, which had no PNG alternative and no code reference, was
+  dropped rather than left as a landmine).
+- **Compiling is not verifying.** Both bugs above compiled clean on
+  Android and both iOS targets, with zero warnings — they only surfaced
+  by installing the APK on a running emulator (`adb install` +
+  `am start`) and checking logcat for `FATAL EXCEPTION`. On this
+  Windows/GPU-emulation setup, `adb screencap` reliably produces a
+  solid-black PNG regardless of what's actually on screen (consistent
+  with the GFXSTREAM/EGL warnings in logcat) — that is a capture
+  artifact, not a rendering bug. To verify real UI content when
+  screenshots are black, use
+  `adb shell uiautomator dump /sdcard/ui.xml` and check the `text="..."`
+  attributes against what the screen should show.
 - This project's Kotlin/Native iOS targets (`compileKotlinIosArm64`,
   `compileKotlinIosSimulatorArm64`) compile and type-check fine on
   Windows with no Xcode/macOS — only linking a real .ipa needs a Mac.

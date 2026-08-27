@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import hem.shared.generated.resources.Res
 import hem.shared.generated.resources.alert
@@ -32,6 +33,7 @@ import hem.shared.generated.resources.onboarding_screen_background
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.nha.project.core.ui.theme.HemPrimary
+import org.nha.project.core.ui.theme.HemTheme
 
 private const val LOCATION_ACCURACY_COPY =
     "Location Accuracy, which provides more accurate location for apps and " +
@@ -119,5 +121,13 @@ private fun LocationSettingRow(
             modifier = Modifier.height(20.dp),
         )
         Text(text = text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Preview
+@Composable
+private fun LocationPermissionScreenPreview() {
+    HemTheme {
+        LocationPermissionScreen(onContinue = {})
     }
 }
