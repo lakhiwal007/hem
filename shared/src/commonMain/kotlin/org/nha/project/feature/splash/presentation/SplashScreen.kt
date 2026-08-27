@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import hem.shared.generated.resources.Res
 import hem.shared.generated.resources.nha_logo
@@ -22,6 +23,7 @@ import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.painterResource
 
 private const val SPLASH_DURATION_MS = 2000L
+
 
 @Composable
 fun SplashScreen(onTimeout: () -> Unit) {

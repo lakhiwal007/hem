@@ -1,6 +1,7 @@
 package org.nha.project.core.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
@@ -20,7 +21,7 @@ private val routeSavedStateConfig =
     SavedStateConfiguration {
         serializersModule =
             SerializersModule {
-                polymorphic(Route::class) {
+                polymorphic(NavKey::class) {
                     subclass(Route.Splash::class, Route.Splash.serializer())
                     subclass(Route.LocationPermission::class, Route.LocationPermission.serializer())
                     subclass(Route.Onboarding::class, Route.Onboarding.serializer())
