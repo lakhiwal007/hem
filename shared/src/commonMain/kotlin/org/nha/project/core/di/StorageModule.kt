@@ -2,9 +2,9 @@ package org.nha.project.core.di
 
 import org.koin.dsl.module
 import org.nha.project.core.storage.AppDatabase
-import org.nha.project.core.storage.TokenStorage
+import org.nha.project.feature.auth.data.SessionStorage
 
 val storageModule =
     module {
-        single { TokenStorage(get<AppDatabase>().tokenDao()) }
+        single { SessionStorage(get<AppDatabase>().sessionDao()) }
     }

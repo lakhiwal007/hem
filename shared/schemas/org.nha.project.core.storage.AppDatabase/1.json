@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "b1b5a164e0a1a33e6d6b74ee9987d11e",
+    "identityHash": "8b4a5deb6ec9b39c1421b5ded0ce613d",
     "entities": [
       {
-        "tableName": "token",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `value` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "tableName": "session",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `clientToken` TEXT NOT NULL, `authToken` TEXT NOT NULL, `transactionId` TEXT NOT NULL, `userId` TEXT NOT NULL, `username` TEXT NOT NULL, `state` TEXT NOT NULL, `entityType` TEXT NOT NULL, `roleName` TEXT NOT NULL, `entityId` INTEGER NOT NULL, `parentEntityId` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -15,9 +15,63 @@
             "notNull": true
           },
           {
-            "fieldPath": "value",
-            "columnName": "value",
+            "fieldPath": "clientToken",
+            "columnName": "clientToken",
             "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "authToken",
+            "columnName": "authToken",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transactionId",
+            "columnName": "transactionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "username",
+            "columnName": "username",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "state",
+            "columnName": "state",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entityType",
+            "columnName": "entityType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "roleName",
+            "columnName": "roleName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "entityId",
+            "columnName": "entityId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "parentEntityId",
+            "columnName": "parentEntityId",
+            "affinity": "INTEGER",
             "notNull": true
           }
         ],
@@ -31,7 +85,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b1b5a164e0a1a33e6d6b74ee9987d11e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8b4a5deb6ec9b39c1421b5ded0ce613d')"
     ]
   }
 }

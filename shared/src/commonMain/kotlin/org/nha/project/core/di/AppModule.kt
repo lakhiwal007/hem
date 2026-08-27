@@ -8,4 +8,5 @@ val appModules: List<Module> =
         networkModule,
         storageModule,
         locationModule,
+        authModule,
     )

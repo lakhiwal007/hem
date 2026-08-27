@@ -23,7 +23,10 @@ private const val ITERATION_COUNT = 1989
 object IdamCrypto {
     private val provider = CryptographyProvider.Default
 
-    suspend fun encrypt(passphrase: String, plainText: String): String {
+    suspend fun encrypt(
+        passphrase: String,
+        plainText: String,
+    ): String {
         val salt = CryptographyRandom.nextBytes(KEY_SIZE_BYTES)
         val iv = CryptographyRandom.nextBytes(IV_SIZE_BYTES)
         val key = deriveKey(passphrase, salt)
@@ -31,7 +34,10 @@ object IdamCrypto {
         return salt.toHex() + iv.toHex() + Base64.encode(cipherText)
     }
 
-    suspend fun decrypt(passphrase: String, cipherText: String): String {
+    suspend fun decrypt(
+        passphrase: String,
+        cipherText: String,
+    ): String {
         val saltHexLen = KEY_SIZE_BYTES * 2
         val ivHexLen = IV_SIZE_BYTES * 2
         val saltHex = cipherText.substring(0, saltHexLen)
@@ -42,7 +48,10 @@ object IdamCrypto {
         return plain.decodeToString()
     }
 
-    private suspend fun deriveKey(passphrase: String, salt: ByteArray): ByteArray {
+    private suspend fun deriveKey(
+        passphrase: String,
+        salt: ByteArray,
+    ): ByteArray {
         val pbkdf2 = provider.get(PBKDF2)
         val derivation =
             pbkdf2.secretDerivation(

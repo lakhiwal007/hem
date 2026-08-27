@@ -15,12 +15,18 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 object SessionCrypto {
     private val provider = CryptographyProvider.Default
 
-    suspend fun encrypt(passphrase: String, data: String): String {
+    suspend fun encrypt(
+        passphrase: String,
+        data: String,
+    ): String {
         val cipher = cipherFor(passphrase)
         return Base64.encode(cipher.encrypt(data.encodeToByteArray()))
     }
 
-    suspend fun decrypt(passphrase: String, encryptedData: String): String {
+    suspend fun decrypt(
+        passphrase: String,
+        encryptedData: String,
+    ): String {
         val cipher = cipherFor(passphrase)
         return cipher.decrypt(Base64.decode(encryptedData)).decodeToString()
     }
