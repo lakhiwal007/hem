@@ -1,24 +1,18 @@
 package org.nha.project.core.storage
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class TokenStorage(
-    private val dataStore: DataStore<Preferences>,
+    private val tokenDao: TokenDao,
 ) {
-    private val authTokenKey = stringPreferencesKey("auth_token")
-
-    val authToken: Flow<String?> = dataStore.data.map { it[authTokenKey] }
+    val authToken: Flow<String?> = tokenDao.observeToken().map { it?.value }
 
     suspend fun saveToken(token: String) {
-        dataStore.edit { it[authTokenKey] = token }
+        tokenDao.upsertToken(TokenEntity(value = token))
     }
 
     suspend fun clearToken() {
-        dataStore.edit { it.remove(authTokenKey) }
+        tokenDao.clearToken()
     }
 }
