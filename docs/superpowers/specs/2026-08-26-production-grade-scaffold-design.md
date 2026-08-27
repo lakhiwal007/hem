@@ -3,6 +3,43 @@
 Date: 2026-08-26
 Status: Approved (chat), implementing
 
+## 2026-08-27 addendum: Navigation 3 + Room replace Navigation-Compose + DataStore
+
+Superseding the original DI/navigation/storage decisions below:
+`org.jetbrains.androidx.navigation:navigation-compose` was replaced with
+`org.jetbrains.androidx.navigation3:navigation3-ui` (1.1.1), and
+`androidx.datastore` was replaced with Room 3.0.2
+(`androidx.room3:room3-*`, KSP, `androidx.sqlite:sqlite-bundled`).
+`TokenStorage`'s public interface is unchanged. Also added: splash
+screen and a custom (non-OS) location-permission screen, both using the
+real brand teal `#1A7275` found embedded in the design assets (replacing
+the earlier placeholder `HemPrimary` guess). Notable implementation
+findings, in case this needs redoing or debugging later:
+
+- Room's `@Database` class needs `@ConstructedBy(XConstructor::class)` +
+  a commonMain `expect object XConstructor : RoomDatabaseConstructor<X>`
+  (with `@Suppress("KotlinNoActualForExpect")`, no manual actuals — KSP
+  generates them) whenever any non-Android target is compiled. Skipping
+  it compiles fine on Android alone and fails only on `kspKotlinIosArm64`
+  / `kspKotlinIosSimulatorArm64`, so it's easy to miss if Android is the
+  only target checked.
+- `Dispatchers.IO` is JVM-internal, not available in commonMain — use
+  `Dispatchers.Default` for Room's `setQueryCoroutineContext`.
+- `rememberNavBackStack(Route.X)` (single-arg) compiles on Android but
+  fails on iOS/Native — Nav3 requires an explicit `SavedStateConfiguration`
+  with a `polymorphic(Route::class) { subclass(...) }` entry per sealed
+  subtype to save/restore state without JVM reflection.
+- This project's Kotlin/Native iOS targets (`compileKotlinIosArm64`,
+  `compileKotlinIosSimulatorArm64`) compile and type-check fine on
+  Windows with no Xcode/macOS — only linking a real .ipa needs a Mac.
+  Treat iOS compile errors as real bugs, not something to skip.
+- The Gradle daemon can serve a stale `generateComposeResClass` /
+  `prepareComposeResourcesTaskFor*` output across unrelated commands in
+  the same session even with `--no-configuration-cache`; when in doubt
+  after touching composeResources, run the specific leaf task
+  (`generateResourceAccessorsForCommonMain`) rather than trusting the
+  aggregator task's UP-TO-DATE claim.
+
 ## Context
 
 `HEM` is a fresh Kotlin Multiplatform / Compose Multiplatform template
