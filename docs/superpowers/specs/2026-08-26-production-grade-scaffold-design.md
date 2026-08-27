@@ -3,6 +3,57 @@
 Date: 2026-08-26
 Status: Approved (chat), implementing
 
+## 2026-08-27 addendum: real NHA login (captcha/OTP flow, crypto, session)
+
+Onboarding is removed from the flow entirely: `Splash` ->
+`LocationPermission` -> `Login` (or straight past it to `HospitalList`
+if `SessionStorage.isLoggedIn` is already true). Login is now a real,
+working integration against `https://apisbeta.nha.gov.in/pmjay/stgbis`,
+ported from a reference Android-only app (`LoginApis`,
+`EncryptDecrypt`/`EncryptDecrypt2`) into KMP. See `AuthApi`,
+`LoginViewModel`, `IdamCrypto`/`SessionCrypto` for the implementation.
+Notable findings:
+
+- `dev.whyoleg.cryptography` (cryptography-core +
+  provider-optimal) reproduces the reference app's
+  PBKDF2WithHmacSHA1 + AES/CBC/PKCS5 (IDAM_KEY) and
+  SHA-256-as-raw-AES-key + AES/ECB/PKCS5 (IDAM_KEY2) schemes on both
+  Android and iOS — verified for real: `generateToken` and
+  `generateCaptcha` both returned HTTP 200 from the live staging
+  server, and the returned captcha image decoded and rendered
+  correctly, meaning the crypto is byte-for-byte compatible with the
+  server, not just "compiles."
+- Needs `@OptIn(DelicateCryptographyApi::class)` for `encryptWithIv`/
+  `decryptWithIv`/ECB and `dev.whyoleg.cryptography.BinarySize.Companion.bits`
+  imported explicitly (not a bare top-level `bits`) for
+  `PBKDF2.secretDerivation`'s `outputSize`.
+- IDAM_KEY/IDAM_KEY2 live in `local.properties` (gitignored) and reach
+  commonMain via a Gradle task (`generateAppSecrets` in
+  `shared/build.gradle.kts`) that writes a generated `AppSecrets`
+  object at build time — the KMP equivalent of the reference app's
+  Android `BuildConfig` fields, since `local.properties` isn't
+  otherwise reachable from Kotlin/Native.
+- Decoding a base64 captcha PNG into something Compose can draw uses
+  `org.jetbrains.compose.resources.decodeToImageBitmap` (already
+  available via the `compose-components-resources` dependency we
+  had) — no Skia/skiko import needed, and it works on both platforms.
+- Ktor's `Logging` plugin silently no-ops on Android without an SLF4J
+  provider on the classpath (`HttpClientFactory` now installs a plain
+  `println`-based `Logger` instead of relying on `Logger.DEFAULT`,
+  which is SLF4J-backed) — without this, network activity is
+  invisible in logcat even though the requests are actually
+  succeeding, which looked exactly like a silent failure until traced.
+- `TokenEntity`/`TokenDao`/`TokenStorage` (the earlier minimal
+  placeholder) are replaced by `SessionEntity`/`SessionDao`/
+  `SessionStorage`, storing the full identity (userId, username,
+  state, entityType, roleName, entityId, parentEntityId) plus both
+  tokens. The Room schema JSON was regenerated from scratch rather
+  than migrated, since the database was never shipped anywhere.
+- Two login "types" (hospital vs. physical verifier) are not a UI
+  choice — the server's `entityapprolelist` on the decrypted profile
+  determines role; the app takes `entityapprolelist.first()` as the
+  active role for now (no chooser UI for multi-role accounts yet).
+
 ## 2026-08-27 addendum: Navigation 3 + Room replace Navigation-Compose + DataStore
 
 Superseding the original DI/navigation/storage decisions below:
