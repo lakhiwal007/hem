@@ -9,17 +9,36 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.nha.project.core.network.ApiResult
+import org.nha.project.core.network.NetworkException
 import org.nha.project.core.secrets.AppSecrets
 import org.nha.project.core.security.IdamCrypto
 import org.nha.project.core.security.SessionCrypto
+import org.nha.project.core.ui.toast.ToastController
 import org.nha.project.feature.auth.data.AuthApi
 import org.nha.project.feature.auth.data.DecryptedProfile
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.auth.domain.UserSession
 
+private val EXCLUDED_AUTH_MODES = setOf("Aadhaar_Fingerprint", "Aadhaar_Iris")
+
+private fun defaultAuthModeFor(
+    code: Int,
+    available: List<String>,
+): String? {
+    val preferred =
+        when (code) {
+            16 -> "Password"
+            56 -> "Mobile_OTP"
+            17 -> "Aadhaar_OTP"
+            else -> null
+        }
+    return preferred?.takeIf { it in available } ?: available.firstOrNull()
+}
+
 class LoginViewModel(
     private val authApi: AuthApi,
     private val sessionStorage: SessionStorage,
+    private val toastController: ToastController,
     private val json: Json = Json { ignoreUnknownKeys = true },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -57,51 +76,85 @@ class LoginViewModel(
     }
 
     fun retryCaptcha1() {
+        transactionId2 = null
+        authTransaction = null
+        _uiState.update {
+            it.copy(
+                userIdInput = "",
+                captcha1Input = "",
+                verifiedUserId = null,
+                authModes = emptyList(),
+                selectedAuthMode = null,
+                captcha2Image = null,
+                otpInput = "",
+                captcha2Input = "",
+                initMessage = null,
+            )
+        }
         loadCaptcha1()
+    }
+
+    fun resendCaptcha2() {
+        val txId2 = transactionId2
+        if (txId2 == null) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = callWithTokenRetry { token -> authApi.resendCaptcha(token, txId2) }) {
+                is ApiResult.Success -> {
+                    val newTxId2 = result.data.transactionid
+                    transactionId2 = newTxId2
+                    val captchaImage = IdamCrypto.decrypt(newTxId2, result.data.captcha)
+                    _uiState.update {
+                        it.copy(isLoading = false, captcha2Image = captchaImage, captcha2Input = "")
+                    }
+                }
+                is ApiResult.Error -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    toastController.error(serverErrorMessage(result.exception, "Could not refresh captcha. Please try again."))
+                }
+            }
+        }
     }
 
     fun verifyUserId() {
         val state = _uiState.value
-        val token = clientToken
         val captchaTransactionId = captcha1TransactionId
-        if (token == null || captchaTransactionId == null) return
+        if (captchaTransactionId == null) return
         if (state.userIdInput.isBlank() || state.captcha1Input.isBlank()) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val encryptedCaptcha = IdamCrypto.encrypt(AppSecrets.IDAM_KEY, state.captcha1Input)
+            _uiState.update { it.copy(isLoading = true) }
+            val encryptedCaptcha = IdamCrypto.encrypt(captchaTransactionId, state.captcha1Input)
             when (
                 val result =
-                    authApi.checkCaptcha(
-                        token = token,
-                        transactionId = captchaTransactionId,
-                        loginId = state.userIdInput,
-                        encryptedCaptcha = encryptedCaptcha,
-                    )
+                    callWithTokenRetry { token ->
+                        authApi.checkCaptcha(
+                            token = token,
+                            transactionId = captchaTransactionId,
+                            loginId = state.userIdInput,
+                            encryptedCaptcha = encryptedCaptcha,
+                        )
+                    }
             ) {
                 is ApiResult.Success -> {
+                    val filteredAuthModes = result.data.authmodes.filterNot { it in EXCLUDED_AUTH_MODES }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             verifiedUserId = result.data.userid,
-                            authModes = result.data.authmodes,
+                            authModes = filteredAuthModes,
                         )
                     }
-                    val defaultAuthMode =
-                        result.data.authmodes.getOrNull(result.data.defaultAuthMode)
-                            ?: result.data.authmodes.firstOrNull()
+                    val defaultAuthMode = defaultAuthModeFor(result.data.defaultAuthMode, filteredAuthModes)
                     if (defaultAuthMode != null) {
                         _uiState.update { it.copy(selectedAuthMode = defaultAuthMode) }
                         startAuthInit(defaultAuthMode)
                     }
                 }
                 is ApiResult.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "Could not verify user ID or captcha.",
-                        )
-                    }
+                    _uiState.update { it.copy(isLoading = false) }
+                    toastController.error(serverErrorMessage(result.exception, "Could not verify user ID or captcha."))
                     loadCaptcha1()
                 }
             }
@@ -110,37 +163,39 @@ class LoginViewModel(
 
     fun submitLogin() {
         val state = _uiState.value
-        val token = clientToken
         val txId2 = transactionId2
-        val authTx = authTransaction
-        if (token == null || txId2 == null || authTx == null) return
+        if (txId2 == null) return
         if (state.otpInput.isBlank() || state.captcha2Input.isBlank()) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val encryptedCaptcha2 = IdamCrypto.encrypt(AppSecrets.IDAM_KEY, state.captcha2Input)
-            val encryptedOtp = IdamCrypto.encrypt(AppSecrets.IDAM_KEY, state.otpInput)
+            _uiState.update { it.copy(isLoading = true) }
+            val encryptedCaptcha2 = IdamCrypto.encrypt(txId2, state.captcha2Input)
+            val encryptedOtp = IdamCrypto.encrypt(txId2, state.otpInput)
             when (
                 val result =
-                    authApi.validate(
-                        token = token,
-                        transactionId = txId2,
-                        encryptedCaptcha = encryptedCaptcha2,
-                        encryptedPassOtp = encryptedOtp,
-                        authTransaction = authTx,
-                    )
+                    callWithTokenRetry { token ->
+                        authApi.validate(
+                            token = token,
+                            transactionId = txId2,
+                            encryptedCaptcha = encryptedCaptcha2,
+                            encryptedPassOtp = encryptedOtp,
+                            authTransaction = authTransaction ?: "null",
+                        )
+                    }
             ) {
                 is ApiResult.Success -> {
                     val authToken = result.data.authtoken
                     val transactionId = result.data.transactionid
                     if (authToken == null || transactionId == null) {
-                        _uiState.update { it.copy(isLoading = false, errorMessage = "Login failed. Please try again.") }
+                        _uiState.update { it.copy(isLoading = false) }
+                        toastController.error("Login failed. Please try again.")
                         return@launch
                     }
-                    fetchProfileAndFinish(token, transactionId, authToken)
+                    fetchProfileAndFinish(transactionId, authToken)
                 }
                 is ApiResult.Error -> {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = "Incorrect OTP or captcha.") }
+                    _uiState.update { it.copy(isLoading = false) }
+                    toastController.error(serverErrorMessage(result.exception, "Incorrect OTP or captcha."))
                 }
             }
         }
@@ -148,10 +203,11 @@ class LoginViewModel(
 
     private fun loadCaptcha1() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true) }
             val token = clientToken ?: fetchClientToken()
             if (token == null) {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Could not connect. Please try again.") }
+                _uiState.update { it.copy(isLoading = false) }
+                toastController.error("Could not connect. Please try again.")
                 return@launch
             }
             when (val result = authApi.generateCaptcha(token)) {
@@ -160,12 +216,8 @@ class LoginViewModel(
                     _uiState.update { it.copy(isLoading = false, captcha1Image = result.data.captcha) }
                 }
                 is ApiResult.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "Could not load captcha. Please try again.",
-                        )
-                    }
+                    _uiState.update { it.copy(isLoading = false) }
+                    toastController.error("Could not load captcha. Please try again.")
                 }
             }
         }
@@ -177,46 +229,50 @@ class LoginViewModel(
             is ApiResult.Error -> null
         }
 
+    private suspend fun <T> callWithTokenRetry(block: suspend (String) -> ApiResult<T>): ApiResult<T> {
+        val token = clientToken ?: fetchClientToken() ?: return ApiResult.Error(NetworkException.Unknown())
+        val result = block(token)
+        if (result is ApiResult.Error && isInvalidTokenError(result.exception)) {
+            val refreshedToken = fetchClientToken() ?: return result
+            return block(refreshedToken)
+        }
+        return result
+    }
+
+    private fun isInvalidTokenError(exception: NetworkException): Boolean =
+        (exception as? NetworkException.ApiError)?.message?.contains("token", ignoreCase = true) == true
+
     private fun startAuthInit(authMode: String) {
-        val token = clientToken
         val userId = _uiState.value.verifiedUserId
-        if (token == null || userId == null) return
+        if (userId == null) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = authApi.init(token, userId, authMode)) {
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = callWithTokenRetry { token -> authApi.init(token, userId, authMode) }) {
                 is ApiResult.Success -> {
                     val encryptedCaptcha2 = result.data.captcha
                     val txId2 = result.data.transactionid
-                    val authTx = result.data.authtransaction
-                    if (encryptedCaptcha2 == null || txId2 == null || authTx == null) {
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                errorMessage = "Could not start login. Please try again.",
-                            )
-                        }
+                    if (encryptedCaptcha2 == null || txId2 == null) {
+                        _uiState.update { it.copy(isLoading = false) }
+                        toastController.error("Could not start login. Please try again.")
                         return@launch
                     }
                     transactionId2 = txId2
-                    authTransaction = authTx
-                    val captchaImage = IdamCrypto.decrypt(AppSecrets.IDAM_KEY, encryptedCaptcha2)
-                    _uiState.update { it.copy(isLoading = false, captcha2Image = captchaImage) }
+                    authTransaction = result.data.authtransaction
+                    val captchaImage = IdamCrypto.decrypt(txId2, encryptedCaptcha2)
+                    _uiState.update {
+                        it.copy(isLoading = false, captcha2Image = captchaImage, initMessage = result.data.message)
+                    }
                 }
                 is ApiResult.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = "Could not start login. Please try again.",
-                        )
-                    }
+                    _uiState.update { it.copy(isLoading = false) }
+                    toastController.error("Could not start login. Please try again.")
                 }
             }
         }
     }
 
     private suspend fun fetchProfileAndFinish(
-        token: String,
         transactionId: String,
         authToken: String,
     ) {
@@ -230,19 +286,15 @@ class LoginViewModel(
             )
         val encryptedBody = SessionCrypto.encrypt(AppSecrets.IDAM_KEY2, requestBody)
 
-        when (val result = authApi.decrypt(token, encryptedBody)) {
+        when (val result = callWithTokenRetry { token -> authApi.decrypt(token, encryptedBody) }) {
             is ApiResult.Success -> {
                 val plainProfile = SessionCrypto.decrypt(AppSecrets.IDAM_KEY2, result.data)
                 val profile = json.decodeFromString<DecryptedProfile>(plainProfile)
                 saveSessionAndFinish(clientToken.orEmpty(), authToken, transactionId, profile)
             }
             is ApiResult.Error -> {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "Login succeeded but profile could not be loaded.",
-                    )
-                }
+                _uiState.update { it.copy(isLoading = false) }
+                toastController.error("Login succeeded but profile could not be loaded.")
             }
         }
     }
@@ -253,7 +305,9 @@ class LoginViewModel(
         transactionId: String,
         profile: DecryptedProfile,
     ) {
-        val role = profile.entityapprolelist.firstOrNull()
+        val role =
+            profile.entityapprolelist.find { "HEM" in it.appRoleList.orEmpty() }
+                ?: profile.entityapprolelist.firstOrNull()
         sessionStorage.save(
             UserSession(
                 clientToken = clientToken,
@@ -269,5 +323,11 @@ class LoginViewModel(
             ),
         )
         _uiState.update { it.copy(isLoading = false, loginSuccess = true) }
+        toastController.success("Welcome back, ${profile.username}!")
     }
+
+    private fun serverErrorMessage(
+        exception: NetworkException,
+        fallback: String,
+    ): String = (exception as? NetworkException.ApiError)?.message ?: fallback
 }

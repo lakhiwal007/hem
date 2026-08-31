@@ -1,6 +1,22 @@
 package org.nha.project.feature.auth.data
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+
+@Serializable
+data class ApiErrorBody(
+    val timestamp: String? = null,
+    @SerialName("api_call_id") val apiCallId: String? = null,
+    @SerialName("correlation_id") val correlationId: String? = null,
+    val captcha: String? = null,
+    val error: ApiErrorDetail? = null,
+)
+
+@Serializable
+data class ApiErrorDetail(
+    val code: String? = null,
+    val message: String? = null,
+)
 
 @Serializable
 data class CaptchaResponse(
@@ -55,4 +71,5 @@ data class EntityAppRole(
     val parentEntityId: Long,
     val roleName: String,
     val entityId: Long,
+    val appRoleList: Map<String, List<String>>? = null,
 )

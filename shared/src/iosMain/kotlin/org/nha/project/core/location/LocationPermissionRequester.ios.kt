@@ -4,6 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import platform.CoreLocation.CLLocationManager
 import platform.CoreLocation.CLLocationManagerDelegateProtocol
+import platform.CoreLocation.kCLAuthorizationStatusDenied
+import platform.CoreLocation.kCLAuthorizationStatusRestricted
+import platform.Foundation.NSURL
+import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.darwin.NSObject
 
 private class LocationAuthorizationDelegate(
@@ -24,5 +29,17 @@ actual fun rememberRequestLocationPermission(onResult: (Boolean) -> Unit): () ->
     val manager = remember { CLLocationManager() }
     val delegate = remember { LocationAuthorizationDelegate(onResult) }
     manager.delegate = delegate
-    return { manager.requestWhenInUseAuthorization() }
+
+    return {
+        val status = manager.authorizationStatus
+        val permanentlyDenied = status == kCLAuthorizationStatusDenied || status == kCLAuthorizationStatusRestricted
+        if (permanentlyDenied) {
+            val settingsUrl = NSURL.URLWithString(UIApplicationOpenSettingsURLString)
+            if (settingsUrl != null) {
+                UIApplication.sharedApplication.openURL(settingsUrl)
+            }
+        } else {
+            manager.requestWhenInUseAuthorization()
+        }
+    }
 }

@@ -27,6 +27,11 @@ sealed class NetworkException(
         serverMessage: String,
     ) : NetworkException("Server error $code: $serverMessage")
 
+    class ApiError(
+        val code: String?,
+        serverMessage: String,
+    ) : NetworkException(serverMessage)
+
     class Unknown(
         cause: Throwable? = null,
     ) : NetworkException(cause?.message ?: "Unknown network error", cause)

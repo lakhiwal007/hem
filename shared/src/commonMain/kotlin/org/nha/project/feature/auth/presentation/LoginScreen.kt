@@ -1,11 +1,14 @@
 package org.nha.project.feature.auth.presentation
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,20 +19,26 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,9 +49,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import hem.shared.generated.resources.Res
@@ -52,6 +67,7 @@ import hem.shared.generated.resources.pmjay_logo
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nha.project.core.ui.components.Base64Image
+import org.nha.project.core.ui.theme.HemFocusBorder
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
 
@@ -73,6 +89,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         onCaptcha2Change = viewModel::onCaptcha2Change,
         onAuthModeSelected = viewModel::onAuthModeSelected,
         onRetryCaptcha1 = viewModel::retryCaptcha1,
+        onResendCaptcha2 = viewModel::resendCaptcha2,
         onVerifyUserId = viewModel::verifyUserId,
         onSubmitLogin = viewModel::submitLogin,
     )
@@ -87,10 +104,12 @@ private fun LoginContent(
     onCaptcha2Change: (String) -> Unit,
     onAuthModeSelected: (String) -> Unit,
     onRetryCaptcha1: () -> Unit,
+    onResendCaptcha2: () -> Unit,
     onVerifyUserId: () -> Unit,
     onSubmitLogin: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    val uriHandler = LocalUriHandler.current
+    Box(modifier = Modifier.fillMaxSize().verticalScroll(state = ScrollState(initial = 0))) {
         Image(
             painter = painterResource(Res.drawable.onboarding_screen_background),
             contentDescription = null,
@@ -138,19 +157,35 @@ private fun LoginContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             FieldLabel("Registered Mobile Number/User ID")
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = state.userIdInput,
-                    onValueChange = onUserIdChange,
-                    enabled = !state.isStepTwoVisible,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                TextButton(onClick = onVerifyUserId, enabled = !state.isStepTwoVisible) {
-                    Text("VERIFY")
-                }
-            }
+            OutlinedTextField(
+                value = state.userIdInput,
+                onValueChange = onUserIdChange,
+                enabled = !state.isStepTwoVisible,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+
+                trailingIcon = {
+                    TextButton(
+                        onClick = onVerifyUserId,
+                        enabled = !state.isStepTwoVisible,
+                        colors =
+                            ButtonDefaults.textButtonColors(
+                                contentColor = HemFocusBorder,
+                                disabledContentColor = HemFocusBorder.copy(alpha = 0.38f),
+                            ),
+                    ) {
+                        Text("VERIFY", fontWeight = FontWeight.Bold)
+                    }
+                },
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = HemFocusBorder,
+                        unfocusedBorderColor = Color.Transparent,
+                        disabledContainerColor = Color.White,
+                    ),
+            )
 
             if (state.isStepTwoVisible) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -162,8 +197,22 @@ private fun LoginContent(
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
-                FieldLabel("Enter OTP")
-                OtpInput(value = state.otpInput, onValueChange = onOtpChange)
+                val isPasswordMode = state.selectedAuthMode == "Password"
+                FieldLabel(if (isPasswordMode) "Enter Password" else "Enter OTP")
+                if (isPasswordMode) {
+                    PasswordInput(value = state.otpInput, onValueChange = onOtpChange)
+                } else {
+                    OtpInput(value = state.otpInput, onValueChange = onOtpChange)
+                }
+
+                if (!state.initMessage.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = state.initMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.85f),
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
                 CaptchaField(
@@ -171,16 +220,7 @@ private fun LoginContent(
                     captchaImage = state.captcha2Image,
                     input = state.captcha2Input,
                     onInputChange = onCaptcha2Change,
-                    onRefresh = null,
-                )
-            }
-
-            state.errorMessage?.let { message ->
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = message,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
+                    onRefresh = onResendCaptcha2,
                 )
             }
 
@@ -191,11 +231,24 @@ private fun LoginContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "Don't have an account? Register",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Don't have an account? ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                    )
+                    Text(
+                        text = "Register",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        textDecoration = TextDecoration.Underline,
+                        modifier =
+                            Modifier.clickable {
+                                uriHandler.openUri("https://ump.pmjay.gov.in/signup")
+                            },
+                    )
+                }
                 Button(
                     onClick = onSubmitLogin,
                     enabled = state.isStepTwoVisible && !state.isLoading,
@@ -228,32 +281,55 @@ private fun CaptchaField(
     onRefresh: (() -> Unit)?,
 ) {
     FieldLabel(label)
-    Box(
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(72.dp)
                 .background(Color.White, RoundedCornerShape(12.dp))
-                .padding(8.dp),
-        contentAlignment = Alignment.Center,
+                .padding(top = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (captchaImage != null) {
-            Base64Image(base64 = captchaImage, contentDescription = "Captcha", modifier = Modifier.fillMaxSize())
+            Base64Image(
+                base64 = captchaImage,
+                contentDescription = "Captcha",
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+            )
         } else {
-            Text(text = "Loading…", style = MaterialTheme.typography.titleMedium)
+            Box(modifier = Modifier.fillMaxWidth().height(50.dp), contentAlignment = Alignment.Center) {
+                Text(text = "Loading…", style = MaterialTheme.typography.titleMedium)
+            }
         }
-    }
-    Spacer(modifier = Modifier.height(8.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = input,
-            onValueChange = onInputChange,
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(12.dp),
-        )
-        if (onRefresh != null) {
-            IconButton(onClick = onRefresh) {
-                Text("⟳", style = MaterialTheme.typography.titleMedium)
+        HorizontalDivider(thickness = 1.dp, color = Color.DarkGray)
+
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = onInputChange,
+                modifier = Modifier.weight(0.5f),
+                shape = RoundedCornerShape(12.dp),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        disabledBorderColor = Color.Transparent,
+                        errorBorderColor = Color.Transparent,
+                    ),
+            )
+            VerticalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                thickness = 1.dp,
+                color = Color.DarkGray,
+            )
+            if (onRefresh != null) {
+                IconButton(onClick = onRefresh) {
+                    Text("⟳", style = MaterialTheme.typography.titleLarge)
+                }
             }
         }
     }
@@ -272,9 +348,15 @@ private fun AuthModeDropdown(
             value = selected.orEmpty(),
             onValueChange = {},
             readOnly = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
             shape = RoundedCornerShape(12.dp),
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = HemFocusBorder,
+                ),
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
@@ -291,32 +373,66 @@ private fun AuthModeDropdown(
 }
 
 @Composable
+private fun PasswordInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+) {
+    var visible by remember { mutableStateOf(false) }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        trailingIcon = {
+            TextButton(
+                onClick = { visible = !visible },
+                colors = ButtonDefaults.textButtonColors(contentColor = HemFocusBorder),
+            ) {
+                Text(if (visible) "HIDE" else "SHOW", fontWeight = FontWeight.Bold)
+            }
+        },
+        colors =
+            OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedBorderColor = HemFocusBorder,
+            ),
+    )
+}
+
+@Composable
 private fun OtpInput(
     value: String,
     onValueChange: (String) -> Unit,
     length: Int = 6,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        repeat(length) { index ->
-            val char = value.getOrNull(index)?.toString() ?: ""
-            Box(
-                modifier =
-                    Modifier
-                        .size(44.dp)
-                        .background(Color.White, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(text = char, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Box(contentAlignment = Alignment.CenterStart) {
+        BasicTextField(
+            value = value,
+            onValueChange = { new -> if (new.length <= length && new.all(Char::isDigit)) onValueChange(new) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            textStyle = TextStyle(color = Color.Transparent),
+            cursorBrush = SolidColor(Color.Transparent),
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            repeat(length) { index ->
+                val char = value.getOrNull(index)?.toString() ?: ""
+                Box(
+                    modifier =
+                        Modifier
+                            .size(44.dp)
+                            .background(Color.White, RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = char, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
-    OutlinedTextField(
-        value = value,
-        onValueChange = { new -> if (new.length <= length && new.all(Char::isDigit)) onValueChange(new) },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-    )
 }
 
 @Preview
@@ -331,6 +447,7 @@ private fun LoginScreenPreview() {
             onCaptcha2Change = {},
             onAuthModeSelected = {},
             onRetryCaptcha1 = {},
+            onResendCaptcha2 = {},
             onVerifyUserId = {},
             onSubmitLogin = {},
         )

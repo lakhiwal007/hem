@@ -14,6 +14,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.Json
 import org.nha.project.core.network.ApiResult
 import org.nha.project.core.network.NetworkException
+import org.nha.project.core.network.applyCommonHeaders
 import org.nha.project.core.secrets.AppSecrets
 import org.nha.project.core.security.IdamCrypto
 import kotlin.time.Clock
@@ -112,6 +113,7 @@ class AuthApi(
     ): ApiResult<String> =
         runCatchingApi {
             httpClient.post(AuthApiUrls.DECRYPT) {
+                applyCommonHeaders()
                 headers {
                     append(HttpHeaders.Authorization, "Bearer $token")
                     append(HttpHeaders.ContentType, "application/json; charset=UTF-8")
@@ -128,6 +130,7 @@ class AuthApi(
     ): ApiResult<T> =
         runCatchingApi {
             httpClient.post(url) {
+                applyCommonHeaders()
                 headers {
                     append(HttpHeaders.Authorization, "Bearer $token")
                     append(HttpHeaders.ContentType, "application/json; charset=UTF-8")
@@ -142,7 +145,17 @@ class AuthApi(
                     try {
                         ApiResult.Success(json.decodeFromString<T>(result.data))
                     } catch (e: Exception) {
-                        ApiResult.Error(NetworkException.Unknown(e))
+                        val serverError =
+                            runCatching {
+                                json.decodeFromString<ApiErrorBody>(
+                                    result.data,
+                                )
+                            }.getOrNull()?.error
+                        if (serverError?.message != null) {
+                            ApiResult.Error(NetworkException.ApiError(serverError.code, serverError.message))
+                        } else {
+                            ApiResult.Error(NetworkException.Unknown(e))
+                        }
                     }
                 }
                 is ApiResult.Error -> result
@@ -155,7 +168,13 @@ class AuthApi(
             if (response.status.value == 200) {
                 ApiResult.Success(response.bodyAsText())
             } else {
-                ApiResult.Error(NetworkException.ServerError(response.status.value, response.bodyAsText()))
+                val bodyText = response.bodyAsText()
+                val serverError = runCatching { json.decodeFromString<ApiErrorBody>(bodyText) }.getOrNull()?.error
+                if (serverError?.message != null) {
+                    ApiResult.Error(NetworkException.ApiError(serverError.code, serverError.message))
+                } else {
+                    ApiResult.Error(NetworkException.ServerError(response.status.value, bodyText))
+                }
             }
         } catch (e: Exception) {
             ApiResult.Error(NetworkException.Unknown(e))

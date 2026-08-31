@@ -8,5 +8,5 @@ import org.nha.project.feature.auth.presentation.LoginViewModel
 val authModule =
     module {
         single { AuthApi(get()) }
-        viewModel { LoginViewModel(get(), get()) }
+        viewModel { LoginViewModel(get(), get(), get()) }
     }
