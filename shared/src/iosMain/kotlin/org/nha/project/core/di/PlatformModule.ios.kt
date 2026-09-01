@@ -4,6 +4,8 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import org.nha.project.core.location.CurrentLocationProvider
+import org.nha.project.core.location.IosCurrentLocationProvider
 import org.nha.project.core.location.IosLocationAccessChecker
 import org.nha.project.core.location.LocationAccessChecker
 import org.nha.project.core.storage.AppDatabase
@@ -15,4 +17,5 @@ actual val platformModule: Module =
         single<HttpClientEngine> { Darwin.create() }
         single<AppDatabase> { getRoomDatabase(getDatabaseBuilder()) }
         single<LocationAccessChecker> { IosLocationAccessChecker() }
+        single<CurrentLocationProvider> { IosCurrentLocationProvider() }
     }

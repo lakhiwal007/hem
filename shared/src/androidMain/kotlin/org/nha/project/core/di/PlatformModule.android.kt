@@ -5,7 +5,9 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import org.nha.project.core.location.AndroidCurrentLocationProvider
 import org.nha.project.core.location.AndroidLocationAccessChecker
+import org.nha.project.core.location.CurrentLocationProvider
 import org.nha.project.core.location.LocationAccessChecker
 import org.nha.project.core.storage.AppDatabase
 import org.nha.project.core.storage.getDatabaseBuilder
@@ -19,4 +21,5 @@ actual val platformModule: Module =
             getRoomDatabase(getDatabaseBuilder(context))
         }
         single<LocationAccessChecker> { AndroidLocationAccessChecker(get()) }
+        single<CurrentLocationProvider> { AndroidCurrentLocationProvider(get()) }
     }

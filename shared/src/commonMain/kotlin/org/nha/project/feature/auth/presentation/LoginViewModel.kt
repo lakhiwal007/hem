@@ -111,7 +111,9 @@ class LoginViewModel(
                 }
                 is ApiResult.Error -> {
                     _uiState.update { it.copy(isLoading = false) }
-                    toastController.error(serverErrorMessage(result.exception, "Could not refresh captcha. Please try again."))
+                    toastController.error(
+                        serverErrorMessage(result.exception, "Could not refresh captcha. Please try again."),
+                    )
                 }
             }
         }

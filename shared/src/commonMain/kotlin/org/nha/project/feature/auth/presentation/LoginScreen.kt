@@ -1,5 +1,6 @@
 package org.nha.project.feature.auth.presentation
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -24,7 +25,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,6 +67,7 @@ import hem.shared.generated.resources.pmjay_logo
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nha.project.core.ui.components.Base64Image
+import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemFocusBorder
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
@@ -109,7 +110,10 @@ private fun LoginContent(
     onSubmitLogin: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
-    Box(modifier = Modifier.fillMaxSize().verticalScroll(state = ScrollState(initial = 0))) {
+    LoadingOverlay(
+        isLoading = state.isLoading,
+        modifier = Modifier.fillMaxSize().verticalScroll(state = ScrollState(initial = 0)),
+    ) {
         Image(
             painter = painterResource(Res.drawable.onboarding_screen_background),
             contentDescription = null,
@@ -163,7 +167,6 @@ private fun LoginContent(
                 enabled = !state.isStepTwoVisible,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-
                 trailingIcon = {
                     TextButton(
                         onClick = onVerifyUserId,
@@ -224,7 +227,7 @@ private fun LoginContent(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -252,14 +255,11 @@ private fun LoginContent(
                 Button(
                     onClick = onSubmitLogin,
                     enabled = state.isStepTwoVisible && !state.isLoading,
-                    shape = RoundedCornerShape(24.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = HemPrimary),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = HemPrimary, contentColor = Color.White),
                 ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White)
-                    } else {
-                        Text("LOG IN »", color = Color.White)
-                    }
+                    Text("LOG IN »", color = Color.White)
                 }
             }
         }

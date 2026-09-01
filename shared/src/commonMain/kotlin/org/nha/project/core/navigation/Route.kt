@@ -2,6 +2,8 @@ package org.nha.project.core.navigation
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
+import org.nha.project.feature.hospital.domain.Hospital
+import org.nha.project.feature.hospital.domain.Service
 
 sealed interface Route : NavKey {
     @Serializable
@@ -17,7 +19,26 @@ sealed interface Route : NavKey {
     data object HospitalList : Route
 
     @Serializable
-    data object Capture : Route
+    data class HospitalLocationVerification(
+        val hospital: Hospital,
+    ) : Route
+
+    @Serializable
+    data class HospitalSpecialities(
+        val hospital: Hospital,
+    ) : Route
+
+    @Serializable
+    data class HospitalServices(
+        val hospital: Hospital,
+        val speciality: String,
+    ) : Route
+
+    @Serializable
+    data class Capture(
+        val service: Service,
+        val speciality: String,
+    ) : Route
 
     @Serializable
     data object Status : Route

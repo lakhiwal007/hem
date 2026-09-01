@@ -94,6 +94,8 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.play.services.location)
+            implementation(libs.androidx.exifinterface)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

@@ -10,4 +10,6 @@ val appModules: List<Module> =
         locationModule,
         uiModule,
         authModule,
+        hospitalModule,
+        captureModule,
     )
