@@ -29,7 +29,7 @@ android {
             .toInt()
 
     defaultConfig {
-        applicationId = "org.nha.project"
+        applicationId = "org.nha.project.hem"
         minSdk =
             libs.versions.android.minSdk
                 .get()

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,9 +17,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,56 +35,76 @@ import hem.shared.generated.resources.Res
 import hem.shared.generated.resources.right_arrow
 import hem.shared.generated.resources.success
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import org.nha.project.core.ui.components.BrandedHeader
+import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
 import org.nha.project.feature.hospital.domain.Service
-
-private val fallbackServices = listOf(Service(name = "Equipment"), Service(name = "OT"), Service(name = "ICU"))
-
-private val servicesBySpeciality =
-    mapOf(
-        "CTVS" to
-            listOf(
-                Service(name = "Heart Lung Machines", hasUploadedImages = true),
-                Service(name = "Blood Gas And Electrolyte Analysers"),
-                Service(name = "OT"),
-                Service(name = "ICU"),
-            ),
-    )
-
-private fun servicesFor(speciality: String): List<Service> = servicesBySpeciality[speciality] ?: fallbackServices
+import org.nha.project.feature.hospital.domain.Speciality
 
 @Composable
 fun HospitalServicesScreen(
-    speciality: String,
+    speciality: Speciality,
+    onBack: () -> Unit,
+    onServiceClick: (Service) -> Unit,
+) {
+    val viewModel = koinViewModel<HospitalServicesViewModel> { parametersOf(speciality) }
+    val state by viewModel.uiState.collectAsState()
+
+    HospitalServicesContent(
+        specialityName = speciality.description,
+        state = state,
+        onBack = onBack,
+        onServiceClick = onServiceClick,
+    )
+}
+
+@Composable
+private fun HospitalServicesContent(
+    specialityName: String,
+    state: HospitalServicesUiState,
     onBack: () -> Unit,
     onServiceClick: (Service) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         BrandedHeader(onBack = onBack)
 
-        Column(
+        if (state.services.isEmpty() && state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Column
+        }
+
+        LoadingOverlay(
+            isLoading = state.isLoading,
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .offset(y = (-16).dp)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 20.dp, bottom = 24.dp),
+                    .background(MaterialTheme.colorScheme.background),
         ) {
-            Text(
-                text = speciality,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.DarkGray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                servicesFor(speciality).forEach { service ->
-                    ServiceCard(service = service, onClick = { onServiceClick(service) })
+            Column(
+                modifier =
+                    Modifier
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 20.dp, bottom = 24.dp),
+            ) {
+                Text(
+                    text = specialityName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.DarkGray,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    state.services.forEach { service ->
+                        ServiceCard(service = service, onClick = { onServiceClick(service) })
+                    }
                 }
             }
         }
@@ -140,8 +164,18 @@ private fun ServiceCard(
 @Composable
 private fun HospitalServicesScreenPreview() {
     HemTheme {
-        HospitalServicesScreen(
-            speciality = "CTVS",
+        HospitalServicesContent(
+            specialityName = "CTVS",
+            state =
+                HospitalServicesUiState(
+                    services =
+                        listOf(
+                            Service(name = "Heart Lung Machines", hasUploadedImages = true),
+                            Service(name = "Blood Gas And Electrolyte Analysers"),
+                            Service(name = "OT"),
+                            Service(name = "ICU"),
+                        ),
+                ),
             onBack = {},
             onServiceClick = {},
         )

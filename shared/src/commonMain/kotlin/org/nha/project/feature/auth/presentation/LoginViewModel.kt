@@ -16,10 +16,20 @@ import org.nha.project.core.security.SessionCrypto
 import org.nha.project.core.ui.toast.ToastController
 import org.nha.project.feature.auth.data.AuthApi
 import org.nha.project.feature.auth.data.DecryptedProfile
+import org.nha.project.feature.auth.data.EntityAppRole
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.auth.domain.UserSession
 
 private val EXCLUDED_AUTH_MODES = setOf("Aadhaar_Fingerprint", "Aadhaar_Iris")
+
+private val ALLOWED_HEM_ROLES = setOf("ADMIN", "PHYSICALVERIFIER")
+
+private fun normalizeRoleName(value: String): String = value.uppercase().filter { it.isLetterOrDigit() }
+
+private fun EntityAppRole.isAllowedHemRole(): Boolean {
+    val hemRoleNames = appRoleList?.get("HEM") ?: return false
+    return hemRoleNames.any { normalizeRoleName(it) in ALLOWED_HEM_ROLES }
+}
 
 private fun defaultAuthModeFor(
     code: Int,
@@ -307,9 +317,12 @@ class LoginViewModel(
         transactionId: String,
         profile: DecryptedProfile,
     ) {
-        val role =
-            profile.entityapprolelist.find { "HEM" in it.appRoleList.orEmpty() }
-                ?: profile.entityapprolelist.firstOrNull()
+        val role = profile.entityapprolelist.find { it.isAllowedHemRole() }
+        if (role == null) {
+            _uiState.update { it.copy(isLoading = false) }
+            toastController.error("Please login with correct credentials.")
+            return
+        }
         sessionStorage.save(
             UserSession(
                 clientToken = clientToken,
@@ -318,10 +331,12 @@ class LoginViewModel(
                 userId = profile.userid,
                 username = profile.username,
                 state = profile.state,
-                entityType = role?.entityType.orEmpty(),
-                roleName = role?.roleName.orEmpty(),
-                entityId = role?.entityId ?: 0L,
-                parentEntityId = role?.parentEntityId ?: 0L,
+                entityType = role.entityType,
+                roleName = role.roleName,
+                entityId = role.entityId,
+                parentEntityId = role.parentEntityId,
+                stateCode = role.stateCode?.toString().orEmpty(),
+                clusterId = role.clusterId?.firstOrNull()?.toString() ?: "0",
             ),
         )
         _uiState.update { it.copy(isLoading = false, loginSuccess = true) }

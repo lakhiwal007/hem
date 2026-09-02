@@ -17,6 +17,8 @@ data class SessionEntity(
     val roleName: String,
     val entityId: Long,
     val parentEntityId: Long,
+    val stateCode: String = "",
+    val clusterId: String = "0",
 )
 
 fun SessionEntity.toDomain() =
@@ -31,6 +33,8 @@ fun SessionEntity.toDomain() =
         roleName = roleName,
         entityId = entityId,
         parentEntityId = parentEntityId,
+        stateCode = stateCode,
+        clusterId = clusterId,
     )
 
 fun UserSession.toEntity() =
@@ -45,4 +49,6 @@ fun UserSession.toEntity() =
         roleName = roleName,
         entityId = entityId,
         parentEntityId = parentEntityId,
+        stateCode = stateCode,
+        clusterId = clusterId,
     )

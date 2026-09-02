@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,9 +16,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,8 +38,10 @@ import hem.shared.generated.resources.right_arrow
 import hem.shared.generated.resources.success
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.koin.compose.viewmodel.koinViewModel
 import org.nha.project.core.location.GeoPoint
 import org.nha.project.core.ui.components.BrandedHeader
+import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemFocusBorder
 import org.nha.project.core.ui.theme.HemSuccess
 import org.nha.project.core.ui.theme.HemTheme
@@ -43,96 +49,94 @@ import org.nha.project.core.ui.theme.HemWarning
 import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.HospitalStatus
 
-private val sampleHospitals =
-    listOf(
-        Hospital(
-            name = "Shree Ganga Ram Hospital",
-            description = "Multi Speciality - Lion Eye hospital road, Punchukian Marg, Karol Bagh, Delhi - 110002",
-            phone = "9827364738",
-            status = HospitalStatus.EMPANELLED,
-            hfrLocation = GeoPoint(latitude = 28.6379, longitude = 77.1900),
-            specialities = listOf("CTVS", "Cardiology", "Interventional Neuroradiology", "Medical Oncology"),
-        ),
-        Hospital(
-            name = "Parmanand Hospital",
-            description = "18, Sham Nath Marg, Civil Lines, Rajpur Road New Delhi, Delhi 110054",
-            phone = "9827364738",
-            status = HospitalStatus.EMPANELLED,
-            hfrLocation = GeoPoint(latitude = 28.6292, longitude = 77.2170),
-            specialities = listOf("General Medicine", "Orthopaedics", "Gynaecology"),
-        ),
-        Hospital(
-            name = "City Centre Hospital",
-            description = "Multi Speciality - Lion Eye hospital road, Punchukian Marg, Karol Bagh, Delhi - 110002",
-            phone = "9827364738",
-            status = HospitalStatus.IN_PROGRESS,
-            hfrLocation = GeoPoint(latitude = 28.6296, longitude = 77.2187),
-            specialities = listOf("General Surgery", "Pediatrics"),
-        ),
-    )
-
 @Composable
 fun HospitalListScreen(
+    onHospitalClick: (Hospital) -> Unit,
+    onBack: (() -> Unit)? = null,
+) {
+    val viewModel = koinViewModel<HospitalListViewModel>()
+    val state by viewModel.uiState.collectAsState()
+
+    HospitalListContent(
+        state = state,
+        onHospitalClick = onHospitalClick,
+        onBack = onBack,
+    )
+}
+
+@Composable
+private fun HospitalListContent(
+    state: HospitalListUiState,
     onHospitalClick: (Hospital) -> Unit,
     onBack: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         BrandedHeader(onBack = onBack)
 
-        Column(
+        if (state.hospitals.isEmpty() && state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Column
+        }
+
+        LoadingOverlay(
+            isLoading = state.isLoading,
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .offset(y = (-16).dp)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 20.dp, bottom = 24.dp),
+                    .background(MaterialTheme.colorScheme.background),
         ) {
-            Text(
-                text = "Hospitals/अस्पताल",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                text = "as per your current location",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            val empanelled = sampleHospitals.filter { it.status == HospitalStatus.EMPANELLED }
-            val inProgress = sampleHospitals.filter { it.status == HospitalStatus.IN_PROGRESS }
-
-            if (empanelled.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                HospitalSectionHeader(
-                    icon = Res.drawable.success,
-                    label = "Empanelled Hospitals (${empanelled.size})",
-                    color = HemSuccess,
+            Column(
+                modifier =
+                    Modifier
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 20.dp, bottom = 24.dp),
+            ) {
+                Text(
+                    text = "Hospitals/अस्पताल",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(modifier = Modifier.height(10.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    empanelled.forEach { hospital ->
-                        HospitalCard(hospital = hospital, onClick = { onHospitalClick(hospital) })
+                Text(
+                    text = "as per your current location",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                if (state.empanelled.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HospitalSectionHeader(
+                        icon = Res.drawable.success,
+                        label = "Empanelled Hospitals (${state.empanelled.size})",
+                        color = HemSuccess,
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        state.empanelled.forEach { hospital ->
+                            HospitalCard(hospital = hospital, onClick = { onHospitalClick(hospital) })
+                        }
                     }
                 }
-            }
 
-            if (inProgress.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                HospitalSectionHeader(
-                    icon = Res.drawable.in_progress_hospitals,
-                    label = "In Progress Hospitals (${inProgress.size})",
-                    color = HemWarning,
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    inProgress.forEach { hospital ->
-                        HospitalCard(hospital = hospital, onClick = { onHospitalClick(hospital) })
+                if (state.inProgress.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    HospitalSectionHeader(
+                        icon = Res.drawable.in_progress_hospitals,
+                        label = "In Progress Hospitals (${state.inProgress.size})",
+                        color = HemWarning,
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        state.inProgress.forEach { hospital ->
+                            HospitalCard(hospital = hospital, onClick = { onHospitalClick(hospital) })
+                        }
                     }
                 }
             }
@@ -224,6 +228,28 @@ private fun HospitalCard(
 @Composable
 private fun HospitalListScreenPreview() {
     HemTheme {
-        HospitalListScreen(onHospitalClick = {})
+        HospitalListContent(
+            state =
+                HospitalListUiState(
+                    hospitals =
+                        listOf(
+                            Hospital(
+                                name = "Shree Ganga Ram Hospital",
+                                description = "Multi Speciality - Karol Bagh, Delhi - 110002",
+                                phone = "9827364738",
+                                status = HospitalStatus.EMPANELLED,
+                                hfrLocation = GeoPoint(latitude = 28.6379, longitude = 77.1900),
+                            ),
+                            Hospital(
+                                name = "City Centre Hospital",
+                                description = "Multi Speciality - Karol Bagh, Delhi - 110002",
+                                phone = "9827364738",
+                                status = HospitalStatus.IN_PROGRESS,
+                                hfrLocation = GeoPoint(latitude = 28.6296, longitude = 77.2187),
+                            ),
+                        ),
+                ),
+            onHospitalClick = {},
+        )
     }
 }

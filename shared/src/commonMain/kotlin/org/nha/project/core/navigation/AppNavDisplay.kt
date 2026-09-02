@@ -110,7 +110,7 @@ fun AppNavDisplay() {
                             hospital = route.hospital,
                             onBack = { backStack.removeLastOrNull() },
                             onSpecialityClick = { speciality ->
-                                backStack.add(Route.HospitalServices(route.hospital, speciality))
+                                backStack.add(Route.HospitalServices(speciality))
                             },
                         )
                     }
@@ -118,7 +118,9 @@ fun AppNavDisplay() {
                         HospitalServicesScreen(
                             speciality = route.speciality,
                             onBack = { backStack.removeLastOrNull() },
-                            onServiceClick = { service -> backStack.add(Route.Capture(service, route.speciality)) },
+                            onServiceClick = { service ->
+                                backStack.add(Route.Capture(service, route.speciality.description))
+                            },
                         )
                     }
                     entry<Route.Capture> { route ->

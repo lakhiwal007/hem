@@ -11,4 +11,6 @@ data class UserSession(
     val roleName: String,
     val entityId: Long,
     val parentEntityId: Long,
+    val stateCode: String,
+    val clusterId: String,
 )

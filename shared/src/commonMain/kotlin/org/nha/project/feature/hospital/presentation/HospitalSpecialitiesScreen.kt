@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,9 +16,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,53 +33,86 @@ import androidx.compose.ui.unit.dp
 import hem.shared.generated.resources.Res
 import hem.shared.generated.resources.right_arrow
 import org.jetbrains.compose.resources.painterResource
-import org.nha.project.core.location.GeoPoint
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import org.nha.project.core.ui.components.BrandedHeader
+import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
 import org.nha.project.feature.hospital.domain.Hospital
-import org.nha.project.feature.hospital.domain.HospitalStatus
+import org.nha.project.feature.hospital.domain.Speciality
 
 @Composable
 fun HospitalSpecialitiesScreen(
     hospital: Hospital,
     onBack: () -> Unit,
-    onSpecialityClick: (String) -> Unit,
+    onSpecialityClick: (Speciality) -> Unit,
+) {
+    val viewModel = koinViewModel<HospitalSpecialitiesViewModel> { parametersOf(hospital) }
+    val state by viewModel.uiState.collectAsState()
+
+    HospitalSpecialitiesContent(
+        hospitalName = hospital.name,
+        state = state,
+        onBack = onBack,
+        onSpecialityClick = onSpecialityClick,
+    )
+}
+
+@Composable
+private fun HospitalSpecialitiesContent(
+    hospitalName: String,
+    state: HospitalSpecialitiesUiState,
+    onBack: () -> Unit,
+    onSpecialityClick: (Speciality) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         BrandedHeader(onBack = onBack)
 
-        Column(
+        if (state.specialities.isEmpty() && state.isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Column
+        }
+
+        LoadingOverlay(
+            isLoading = state.isLoading,
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .offset(y = (-16).dp)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(horizontal = 20.dp)
-                    .padding(top = 20.dp, bottom = 24.dp),
+                    .background(MaterialTheme.colorScheme.background),
         ) {
-            Text(
-                text = hospital.name,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.DarkGray,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            Text(
-                text = "Specialities",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = HemPrimary,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                hospital.specialities.forEach { speciality ->
-                    SpecialityCard(
-                        speciality = speciality,
-                        onClick = { onSpecialityClick(speciality) },
-                    )
+            Column(
+                modifier =
+                    Modifier
+                        .padding(horizontal = 20.dp)
+                        .padding(top = 20.dp, bottom = 24.dp),
+            ) {
+                Text(
+                    text = hospitalName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.DarkGray,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "Specialities",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = HemPrimary,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    state.specialities.forEach { speciality ->
+                        SpecialityCard(
+                            speciality = speciality,
+                            onClick = { onSpecialityClick(speciality) },
+                        )
+                    }
                 }
             }
         }
@@ -84,7 +121,7 @@ fun HospitalSpecialitiesScreen(
 
 @Composable
 private fun SpecialityCard(
-    speciality: String,
+    speciality: Speciality,
     onClick: () -> Unit,
 ) {
     Row(
@@ -99,7 +136,7 @@ private fun SpecialityCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = speciality,
+            text = speciality.description,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             color = Color.DarkGray,
@@ -117,15 +154,17 @@ private fun SpecialityCard(
 @Composable
 private fun HospitalSpecialitiesScreenPreview() {
     HemTheme {
-        HospitalSpecialitiesScreen(
-            hospital =
-                Hospital(
-                    name = "Shree Ganga Ram Hospital",
-                    description = "",
-                    phone = "",
-                    status = HospitalStatus.EMPANELLED,
-                    hfrLocation = GeoPoint(28.6139, 77.2090),
-                    specialities = listOf("CTVS", "Cardiology", "Interventional Neuroradiology", "Medical Oncology"),
+        HospitalSpecialitiesContent(
+            hospitalName = "Shree Ganga Ram Hospital",
+            state =
+                HospitalSpecialitiesUiState(
+                    specialities =
+                        listOf(
+                            Speciality(1, "SV", "CTVS"),
+                            Speciality(2, "CD", "Cardiology"),
+                            Speciality(3, "IN", "Interventional Neuroradiology"),
+                            Speciality(4, "MO", "Medical Oncology"),
+                        ),
                 ),
             onBack = {},
             onSpecialityClick = {},

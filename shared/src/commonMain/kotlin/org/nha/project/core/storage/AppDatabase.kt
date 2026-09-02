@@ -7,7 +7,7 @@ import androidx.room3.RoomDatabaseConstructor
 import org.nha.project.feature.auth.data.SessionDao
 import org.nha.project.feature.auth.data.SessionEntity
 
-@Database(entities = [SessionEntity::class], version = 1)
+@Database(entities = [SessionEntity::class], version = 3)
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao

@@ -8,10 +8,12 @@ enum class HospitalStatus { EMPANELLED, IN_PROGRESS }
 
 @Serializable
 data class Hospital(
+    val hospitalId: Long = 0L,
     val name: String,
     val description: String,
     val phone: String,
     val status: HospitalStatus,
     val hfrLocation: GeoPoint,
-    val specialities: List<String> = emptyList(),
+    val hfrId: String = "",
+    val schemeCode: String = "PMJAY",
 )

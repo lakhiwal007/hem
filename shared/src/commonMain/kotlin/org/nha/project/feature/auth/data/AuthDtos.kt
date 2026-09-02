@@ -71,5 +71,7 @@ data class EntityAppRole(
     val parentEntityId: Long,
     val roleName: String,
     val entityId: Long,
+    val stateCode: Int? = null,
+    val clusterId: List<Int>? = null,
     val appRoleList: Map<String, List<String>>? = null,
 )
