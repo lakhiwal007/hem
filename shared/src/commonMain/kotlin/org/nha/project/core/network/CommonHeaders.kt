@@ -6,7 +6,7 @@ import io.ktor.client.request.headers
 private val COMMON_HEADERS =
     mapOf(
         "accept" to "application/json, text/plain, */*",
-        "appname" to "BIS",
+        "appname" to "HEM",
         "access-control-allow-origin" to "https://bisbeta.nha.gov.in",
         "cache-control" to "no-cache",
         "priority" to "u=1, i",

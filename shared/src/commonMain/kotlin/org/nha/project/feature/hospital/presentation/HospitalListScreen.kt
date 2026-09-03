@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,7 +44,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nha.project.core.location.GeoPoint
 import org.nha.project.core.ui.components.BrandedHeader
-import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemFocusBorder
 import org.nha.project.core.ui.theme.HemSuccess
 import org.nha.project.core.ui.theme.HemTheme
@@ -52,6 +54,7 @@ import org.nha.project.feature.hospital.domain.HospitalStatus
 @Composable
 fun HospitalListScreen(
     onHospitalClick: (Hospital) -> Unit,
+    onLogout: () -> Unit,
     onBack: (() -> Unit)? = null,
 ) {
     val viewModel = koinViewModel<HospitalListViewModel>()
@@ -60,6 +63,8 @@ fun HospitalListScreen(
     HospitalListContent(
         state = state,
         onHospitalClick = onHospitalClick,
+        onRefresh = viewModel::loadHospitals,
+        onLogout = { viewModel.logout(onLogout) },
         onBack = onBack,
     )
 }
@@ -68,10 +73,12 @@ fun HospitalListScreen(
 private fun HospitalListContent(
     state: HospitalListUiState,
     onHospitalClick: (Hospital) -> Unit,
+    onRefresh: () -> Unit,
+    onLogout: () -> Unit,
     onBack: (() -> Unit)? = null,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        BrandedHeader(onBack = onBack)
+        BrandedHeader(onBack = onBack, onLogout = onLogout)
 
         if (state.hospitals.isEmpty() && state.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -80,10 +87,12 @@ private fun HospitalListContent(
             return@Column
         }
 
-        LoadingOverlay(
-            isLoading = state.isLoading,
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = onRefresh,
             modifier =
                 Modifier
+                    .weight(1f)
                     .fillMaxWidth()
                     .offset(y = (-16).dp)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
@@ -92,6 +101,8 @@ private fun HospitalListContent(
             Column(
                 modifier =
                     Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 20.dp)
                         .padding(top = 20.dp, bottom = 24.dp),
             ) {
@@ -250,6 +261,8 @@ private fun HospitalListScreenPreview() {
                         ),
                 ),
             onHospitalClick = {},
+            onRefresh = {},
+            onLogout = {},
         )
     }
 }

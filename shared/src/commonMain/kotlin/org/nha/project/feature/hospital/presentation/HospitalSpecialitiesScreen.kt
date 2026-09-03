@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,7 +39,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import org.nha.project.core.ui.components.BrandedHeader
-import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
 import org.nha.project.feature.hospital.domain.Hospital
@@ -55,6 +57,7 @@ fun HospitalSpecialitiesScreen(
         hospitalName = hospital.name,
         state = state,
         onBack = onBack,
+        onRefresh = viewModel::loadSpecialities,
         onSpecialityClick = onSpecialityClick,
     )
 }
@@ -64,6 +67,7 @@ private fun HospitalSpecialitiesContent(
     hospitalName: String,
     state: HospitalSpecialitiesUiState,
     onBack: () -> Unit,
+    onRefresh: () -> Unit,
     onSpecialityClick: (Speciality) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -76,10 +80,12 @@ private fun HospitalSpecialitiesContent(
             return@Column
         }
 
-        LoadingOverlay(
-            isLoading = state.isLoading,
+        PullToRefreshBox(
+            isRefreshing = state.isLoading,
+            onRefresh = onRefresh,
             modifier =
                 Modifier
+                    .weight(1f)
                     .fillMaxWidth()
                     .offset(y = (-16).dp)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
@@ -88,6 +94,8 @@ private fun HospitalSpecialitiesContent(
             Column(
                 modifier =
                     Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 20.dp)
                         .padding(top = 20.dp, bottom = 24.dp),
             ) {
@@ -167,6 +175,7 @@ private fun HospitalSpecialitiesScreenPreview() {
                         ),
                 ),
             onBack = {},
+            onRefresh = {},
             onSpecialityClick = {},
         )
     }

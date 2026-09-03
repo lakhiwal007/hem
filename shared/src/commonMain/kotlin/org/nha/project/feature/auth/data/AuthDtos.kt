@@ -66,6 +66,18 @@ data class DecryptedProfile(
 )
 
 @Serializable
+data class LoginLogoutAuditRequest(
+    val transactionid: String,
+    val userid: String,
+    val location: String? = null,
+    val action: String,
+    val browserName: String,
+    val applicationName: String,
+    val operatingSystem: String,
+    val ipAddres: String,
+)
+
+@Serializable
 data class EntityAppRole(
     val entityType: String,
     val parentEntityId: Long,

@@ -323,7 +323,7 @@ class LoginViewModel(
             toastController.error("Please login with correct credentials.")
             return
         }
-        sessionStorage.save(
+        val session =
             UserSession(
                 clientToken = clientToken,
                 authToken = authToken,
@@ -337,8 +337,9 @@ class LoginViewModel(
                 parentEntityId = role.parentEntityId,
                 stateCode = role.stateCode?.toString().orEmpty(),
                 clusterId = role.clusterId?.firstOrNull()?.toString() ?: "0",
-            ),
-        )
+            )
+        sessionStorage.save(session)
+        authApi.storeLoginLogoutDetails(session, "Login")
         _uiState.update { it.copy(isLoading = false, loginSuccess = true) }
         toastController.success("Welcome back, ${profile.username}!")
     }

@@ -11,7 +11,7 @@ import org.nha.project.feature.hospital.presentation.HospitalSpecialitiesViewMod
 val hospitalModule =
     module {
         single { HospitalApi(get(), get()) }
-        viewModel { HospitalListViewModel(get(), get()) }
+        viewModel { HospitalListViewModel(get(), get(), get(), get()) }
         viewModel { params -> HospitalLocationVerificationViewModel(get(), get(), params.get()) }
         viewModel { params -> HospitalSpecialitiesViewModel(get(), get(), params.get()) }
         viewModel { params -> HospitalServicesViewModel(get(), get(), params.get()) }

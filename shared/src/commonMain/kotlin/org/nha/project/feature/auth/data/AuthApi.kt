@@ -15,14 +15,18 @@ import kotlinx.serialization.json.Json
 import org.nha.project.core.network.ApiResult
 import org.nha.project.core.network.NetworkException
 import org.nha.project.core.network.applyCommonHeaders
+import org.nha.project.core.network.applyHemHeaders
 import org.nha.project.core.secrets.AppSecrets
 import org.nha.project.core.security.IdamCrypto
+import org.nha.project.feature.auth.domain.UserSession
+import org.nha.project.getPlatform
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 private const val REQUEST_AGENT = "nhaMobile"
+private const val AUDIT_BROWSER_NAME = "Chrome,134.0.0.0"
 
 class AuthApi(
     private val httpClient: HttpClient,
@@ -120,6 +124,31 @@ class AuthApi(
                     append("Request-Agent", REQUEST_AGENT)
                 }
                 setBody(encryptedBody)
+            }
+        }
+
+    suspend fun storeLoginLogoutDetails(
+        session: UserSession,
+        action: String,
+    ): ApiResult<String> =
+        runCatchingApi {
+            httpClient.post(AuthApiUrls.AUDIT_LOGIN_LOGOUT) {
+                applyHemHeaders(session)
+                contentType(ContentType.Application.Json)
+                setBody(
+                    json.encodeToString(
+                        LoginLogoutAuditRequest(
+                            transactionid = session.transactionId,
+                            userid = session.userId.filter { it.isDigit() }.ifEmpty { session.userId },
+                            location = if (action == "Login") "" else null,
+                            action = action,
+                            browserName = AUDIT_BROWSER_NAME,
+                            applicationName = "HEM",
+                            operatingSystem = getPlatform().name,
+                            ipAddres = "",
+                        ),
+                    ),
+                )
             }
         }
 

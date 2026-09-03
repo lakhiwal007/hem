@@ -96,6 +96,10 @@ fun AppNavDisplay() {
                             onHospitalClick = { hospital ->
                                 backStack.add(Route.HospitalLocationVerification(hospital))
                             },
+                            onLogout = {
+                                backStack.clear()
+                                backStack.add(Route.Login)
+                            },
                         )
                     }
                     entry<Route.HospitalLocationVerification> { route ->
