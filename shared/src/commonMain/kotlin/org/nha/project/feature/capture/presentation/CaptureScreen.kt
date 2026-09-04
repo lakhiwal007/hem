@@ -46,6 +46,7 @@ import hem.shared.generated.resources.Res
 import hem.shared.generated.resources.add_more
 import hem.shared.generated.resources.capture
 import hem.shared.generated.resources.guidelines
+import hem.shared.generated.resources.location
 import hem.shared.generated.resources.retake
 import hem.shared.generated.resources.success
 import hem.shared.generated.resources.zoom
@@ -53,6 +54,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import org.nha.project.core.capture.rememberCameraCapture
+import org.nha.project.core.location.GeoPoint
 import org.nha.project.core.ui.components.Base64Image
 import org.nha.project.core.ui.components.BrandedHeader
 import org.nha.project.core.ui.components.LoadingOverlay
@@ -60,6 +62,7 @@ import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
 import org.nha.project.feature.capture.domain.CapturedImage
 import org.nha.project.feature.hospital.domain.Service
+import kotlin.math.round
 
 private val GUIDELINES =
     listOf(
@@ -89,7 +92,7 @@ fun CaptureScreen(
             pendingRetakeIndex = null
         })
 
-    var zoomedImage by remember { mutableStateOf<String?>(null) }
+    var zoomedImage by remember { mutableStateOf<CapturedImage?>(null) }
 
     CaptureContent(
         state = state,
@@ -108,7 +111,7 @@ fun CaptureScreen(
 
     val zoomed = zoomedImage
     if (zoomed != null) {
-        ImagePreviewDialog(base64 = zoomed, onDismiss = { zoomedImage = null })
+        ImagePreviewDialog(image = zoomed, onDismiss = { zoomedImage = null })
     }
 }
 
@@ -118,7 +121,7 @@ private fun CaptureContent(
     onBack: () -> Unit,
     onCapture: () -> Unit,
     onRetake: (Int) -> Unit,
-    onZoom: (String) -> Unit,
+    onZoom: (CapturedImage) -> Unit,
     onSubmit: () -> Unit,
 ) {
     LoadingOverlay(
@@ -185,7 +188,7 @@ private fun CaptureContent(
                             CapturedThumbnail(
                                 image = image,
                                 onRetake = { onRetake(index) },
-                                onZoom = { onZoom(image.base64) },
+                                onZoom = { onZoom(image) },
                             )
                         }
                         if (state.canAddMore) {
@@ -369,7 +372,7 @@ private fun NoteCard() {
 
 @Composable
 private fun ImagePreviewDialog(
-    base64: String,
+    image: CapturedImage,
     onDismiss: () -> Unit,
 ) {
     Dialog(
@@ -385,10 +388,14 @@ private fun ImagePreviewDialog(
             contentAlignment = Alignment.Center,
         ) {
             Base64Image(
-                base64 = base64,
+                base64 = image.base64,
                 contentDescription = "Captured image preview",
                 modifier = Modifier.fillMaxSize().padding(24.dp),
                 contentScale = ContentScale.Fit,
+            )
+            ImageMetadataOverlay(
+                image = image,
+                modifier = Modifier.align(Alignment.BottomStart).padding(24.dp),
             )
             Box(
                 modifier =
@@ -405,6 +412,47 @@ private fun ImagePreviewDialog(
             }
         }
     }
+}
+
+@Composable
+private fun ImageMetadataOverlay(
+    image: CapturedImage,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.Black.copy(alpha = 0.55f))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text = image.fileName,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(Res.drawable.location),
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = image.location?.let { formatLiveLocation(it) } ?: "Live location unavailable",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.9f),
+            )
+        }
+    }
+}
+
+private fun formatLiveLocation(point: GeoPoint): String {
+    val lat = round(point.latitude * 10000) / 10000
+    val long = round(point.longitude * 10000) / 10000
+    return "$lat°N, $long°E"
 }
 
 private fun Modifier.dashedBorder(

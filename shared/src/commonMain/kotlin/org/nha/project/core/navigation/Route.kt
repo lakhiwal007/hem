@@ -41,5 +41,15 @@ sealed interface Route : NavKey {
     ) : Route
 
     @Serializable
+    data class HospitalOtpVerification(
+        val hospital: Hospital,
+    ) : Route
+
+    @Serializable
+    data class PhysicalVerifyImages(
+        val service: Service,
+    ) : Route
+
+    @Serializable
     data object Status : Route
 }

@@ -47,11 +47,12 @@ class HospitalListViewModel(
     fun logout(onLoggedOut: () -> Unit) {
         viewModelScope.launch {
             val session = sessionStorage.session.first()
+            sessionStorage.clear()
+            onLoggedOut()
+            // Best-effort audit call — must not block navigation if it's slow or fails.
             if (session != null) {
                 authApi.storeLoginLogoutDetails(session, "Logout")
             }
-            sessionStorage.clear()
-            onLoggedOut()
         }
     }
 }

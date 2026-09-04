@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import hem.shared.generated.resources.Res
 import hem.shared.generated.resources.back_arrow
 import hem.shared.generated.resources.hero_banner
-import hem.shared.generated.resources.nha_logo
 import hem.shared.generated.resources.pmjay_logo
 import org.jetbrains.compose.resources.painterResource
 

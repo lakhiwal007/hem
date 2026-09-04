@@ -14,3 +14,6 @@ data class UserSession(
     val stateCode: String,
     val clusterId: String,
 )
+
+fun UserSession.isPhysicalVerifier(): Boolean =
+    roleName.uppercase().filter { it.isLetterOrDigit() } == "PHYSICALVERIFIER"
