@@ -58,17 +58,21 @@ import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemFocusBorder
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
+import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.Service
+import org.nha.project.feature.hospital.domain.Speciality
 import org.nha.project.feature.verification.data.UploadedImage
 import org.nha.project.feature.verification.data.VerificationAction
 
 @Composable
 fun PhysicalVerifyImagesScreen(
+    hospital: Hospital,
+    speciality: Speciality,
     service: Service,
     onBack: () -> Unit,
     onSubmitted: () -> Unit,
 ) {
-    val viewModel = koinViewModel<PhysicalVerifyImagesViewModel> { parametersOf(service) }
+    val viewModel = koinViewModel<PhysicalVerifyImagesViewModel> { parametersOf(hospital, speciality, service) }
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(state.submitted) {
@@ -182,6 +186,7 @@ private fun PhysicalVerifyImagesContent(
                 Spacer(modifier = Modifier.height(28.dp))
                 Button(
                     onClick = onSubmit,
+                    enabled = state.canSubmit,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = HemPrimary),

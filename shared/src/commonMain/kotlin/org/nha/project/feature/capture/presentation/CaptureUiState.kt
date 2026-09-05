@@ -7,7 +7,10 @@ data class CaptureUiState(
     val images: List<CapturedImage> = emptyList(),
     val maxImages: Int = 3,
     val isLoading: Boolean = false,
+    val isSubmitting: Boolean = false,
+    val finalSubmitAllowed: Boolean = true,
+    val submitted: Boolean = false,
 ) {
     val canAddMore: Boolean get() = images.size < maxImages
-    val canSubmit: Boolean get() = images.isNotEmpty()
+    val canSubmit: Boolean get() = images.isNotEmpty() && !isSubmitting && finalSubmitAllowed
 }

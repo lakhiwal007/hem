@@ -21,6 +21,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +62,9 @@ import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
 import org.nha.project.feature.capture.domain.CapturedImage
+import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.Service
+import org.nha.project.feature.hospital.domain.Speciality
 import kotlin.math.round
 
 private val GUIDELINES =
@@ -74,13 +77,18 @@ private val GUIDELINES =
 
 @Composable
 fun CaptureScreen(
+    hospital: Hospital,
+    speciality: Speciality,
     service: Service,
-    speciality: String,
     onBack: () -> Unit,
     onSubmit: () -> Unit,
 ) {
-    val viewModel = koinViewModel<CaptureViewModel> { parametersOf(service, speciality) }
+    val viewModel = koinViewModel<CaptureViewModel> { parametersOf(hospital, speciality, service) }
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(state.submitted) {
+        if (state.submitted) onSubmit()
+    }
 
     var pendingRetakeIndex by remember { mutableStateOf<Int?>(null) }
     val captureImage =
@@ -106,7 +114,7 @@ fun CaptureScreen(
             captureImage()
         },
         onZoom = { image -> zoomedImage = image },
-        onSubmit = onSubmit,
+        onSubmit = viewModel::submit,
     )
 
     val zoomed = zoomedImage
@@ -125,7 +133,7 @@ private fun CaptureContent(
     onSubmit: () -> Unit,
 ) {
     LoadingOverlay(
-        isLoading = state.isLoading,
+        isLoading = state.isLoading || state.isSubmitting,
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {

@@ -6,9 +6,10 @@ enum class OtpVerificationResult { SUCCESS, FAILURE }
 
 data class HospitalOtpVerificationUiState(
     val otp: String = "",
+    val transactionId: String? = null,
     val isSendingOtp: Boolean = false,
     val isSubmitting: Boolean = false,
     val result: OtpVerificationResult? = null,
 ) {
-    val canSubmit: Boolean get() = otp.length == OTP_LENGTH && !isSubmitting
+    val canSubmit: Boolean get() = otp.length == OTP_LENGTH && !isSubmitting && transactionId != null
 }

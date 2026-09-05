@@ -7,8 +7,11 @@ data class PhysicalVerifyImagesUiState(
     val serviceName: String,
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
+    val submissionId: Long? = null,
     val images: List<UploadedImage> = emptyList(),
     val comments: String = "",
     val action: VerificationAction = VerificationAction.RECOMMENDED,
     val submitted: Boolean = false,
-)
+) {
+    val canSubmit: Boolean get() = submissionId != null && !isSubmitting
+}

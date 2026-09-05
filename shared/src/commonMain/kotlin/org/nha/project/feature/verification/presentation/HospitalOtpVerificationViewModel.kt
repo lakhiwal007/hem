@@ -7,12 +7,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.nha.project.core.network.ApiResult
 import org.nha.project.core.ui.toast.ToastController
 import org.nha.project.feature.hospital.domain.Hospital
-import org.nha.project.feature.verification.data.PhysicalVerifierMockRepository
+import org.nha.project.feature.verification.data.VerifierApi
 
 class HospitalOtpVerificationViewModel(
-    private val repository: PhysicalVerifierMockRepository,
+    private val verifierApi: VerifierApi,
     private val toastController: ToastController,
     private val hospital: Hospital,
 ) : ViewModel() {
@@ -25,10 +26,17 @@ class HospitalOtpVerificationViewModel(
 
     fun sendOtp() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isSendingOtp = true) }
-            repository.sendOtp(hospital)
-            _uiState.update { it.copy(isSendingOtp = false) }
-            toastController.info("OTP sent to the hospital admin's registered mobile number")
+            _uiState.update { it.copy(isSendingOtp = true, transactionId = null) }
+            when (val result = verifierApi.generateOtp(hospital.phone)) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isSendingOtp = false, transactionId = result.data.transactionid) }
+                    toastController.info("OTP sent to the hospital admin's registered mobile number")
+                }
+                is ApiResult.Error -> {
+                    _uiState.update { it.copy(isSendingOtp = false) }
+                    toastController.error("Could not send OTP. Please try again.")
+                }
+            }
         }
     }
 
@@ -38,15 +46,17 @@ class HospitalOtpVerificationViewModel(
 
     fun submitOtp() {
         val state = _uiState.value
-        if (!state.canSubmit) return
+        val transactionId = state.transactionId
+        if (!state.canSubmit || transactionId == null) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
-            val isValid = repository.verifyOtp(state.otp)
-            _uiState.update {
-                it.copy(
-                    isSubmitting = false,
-                    result = if (isValid) OtpVerificationResult.SUCCESS else OtpVerificationResult.FAILURE,
-                )
+            when (verifierApi.validateOtp(transactionId, state.otp)) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isSubmitting = false, result = OtpVerificationResult.SUCCESS) }
+                }
+                is ApiResult.Error -> {
+                    _uiState.update { it.copy(isSubmitting = false, result = OtpVerificationResult.FAILURE) }
+                }
             }
         }
     }

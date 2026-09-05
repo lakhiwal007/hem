@@ -31,13 +31,15 @@ sealed interface Route : NavKey {
 
     @Serializable
     data class HospitalServices(
+        val hospital: Hospital,
         val speciality: Speciality,
     ) : Route
 
     @Serializable
     data class Capture(
+        val hospital: Hospital,
+        val speciality: Speciality,
         val service: Service,
-        val speciality: String,
     ) : Route
 
     @Serializable
@@ -47,6 +49,8 @@ sealed interface Route : NavKey {
 
     @Serializable
     data class PhysicalVerifyImages(
+        val hospital: Hospital,
+        val speciality: Speciality,
         val service: Service,
     ) : Route
 

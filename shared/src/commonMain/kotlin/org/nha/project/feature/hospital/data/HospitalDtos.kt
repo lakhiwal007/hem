@@ -88,6 +88,8 @@ fun List<SpecialityDto>.toSpecialities(): List<Speciality> =
     }.distinctBy { it.id }
 
 fun List<ServiceDto>.toServices(): List<Service> =
-    mapNotNull { dto -> dto.services?.takeIf { it.isNotBlank() } }
-        .distinct()
-        .map { Service(name = it) }
+    mapNotNull { dto ->
+        val name = dto.services?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        val id = dto.id ?: return@mapNotNull null
+        Service(name = name, id = id, specialityId = dto.specialityId ?: 0L)
+    }.distinctBy { it.id }

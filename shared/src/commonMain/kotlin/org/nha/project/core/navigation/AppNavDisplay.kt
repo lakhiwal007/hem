@@ -154,7 +154,7 @@ fun AppNavDisplay() {
                                 hospital = route.hospital,
                                 onBack = { backStack.removeLastOrNull() },
                                 onSpecialityClick = { speciality ->
-                                    backStack.add(Route.HospitalServices(speciality))
+                                    backStack.add(Route.HospitalServices(route.hospital, speciality))
                                 },
                             )
                         }
@@ -165,9 +165,9 @@ fun AppNavDisplay() {
                                 onServiceClick = { service ->
                                     backStack.add(
                                         if (isPhysicalVerifier) {
-                                            Route.PhysicalVerifyImages(service)
+                                            Route.PhysicalVerifyImages(route.hospital, route.speciality, service)
                                         } else {
-                                            Route.Capture(service, route.speciality.description)
+                                            Route.Capture(route.hospital, route.speciality, service)
                                         },
                                     )
                                 },
@@ -175,14 +175,17 @@ fun AppNavDisplay() {
                         }
                         entry<Route.Capture> { route ->
                             CaptureScreen(
-                                service = route.service,
+                                hospital = route.hospital,
                                 speciality = route.speciality,
+                                service = route.service,
                                 onBack = { backStack.removeLastOrNull() },
                                 onSubmit = { backStack.removeLastOrNull() },
                             )
                         }
                         entry<Route.PhysicalVerifyImages> { route ->
                             PhysicalVerifyImagesScreen(
+                                hospital = route.hospital,
+                                speciality = route.speciality,
                                 service = route.service,
                                 onBack = { backStack.removeLastOrNull() },
                                 onSubmitted = { backStack.removeLastOrNull() },
