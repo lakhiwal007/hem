@@ -13,7 +13,7 @@ data class GeoPoint(
     val longitude: Double,
 )
 
-const val MAX_ALLOWED_DISTANCE_METERS = 200.0
+const val MAX_ALLOWED_DISTANCE_METERS = 100.0
 
 private const val EARTH_RADIUS_METERS = 6_371_000.0
 

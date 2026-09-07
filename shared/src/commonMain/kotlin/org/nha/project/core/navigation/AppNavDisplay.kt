@@ -71,7 +71,7 @@ private val routeSavedStateConfig =
             }
     }
 
-private const val TOKEN_REFRESH_INTERVAL_MILLIS = 5 * 60 * 1000L
+private const val TOKEN_REFRESH_INTERVAL_MILLIS = 8 * 60 * 1000L
 
 @Composable
 fun AppNavDisplay() {

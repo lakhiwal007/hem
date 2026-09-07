@@ -23,7 +23,7 @@ import org.nha.project.feature.auth.data.EntityAppRole
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.auth.domain.UserSession
 
-private val EXCLUDED_AUTH_MODES = setOf("Aadhaar_Fingerprint", "Aadhaar_Iris")
+private val ALLOWED_AUTH_MODES = setOf("Password", "Aadhaar_OTP", "Mobile_OTP")
 
 private val ALLOWED_HEM_ROLES = setOf("ADMIN", "PHYSICALVERIFIER")
 
@@ -45,7 +45,9 @@ private fun defaultAuthModeFor(
             17 -> "Aadhaar_OTP"
             else -> null
         }
-    return preferred?.takeIf { it in available } ?: available.firstOrNull()
+    return preferred?.takeIf { it in available }
+        ?: "Password".takeIf { it in available }
+        ?: available.firstOrNull()
 }
 
 class LoginViewModel(
@@ -154,7 +156,7 @@ class LoginViewModel(
                     }
             ) {
                 is ApiResult.Success -> {
-                    val filteredAuthModes = result.data.authmodes.filterNot { it in EXCLUDED_AUTH_MODES }
+                    val filteredAuthModes = result.data.authmodes.filter { it in ALLOWED_AUTH_MODES }
                     _uiState.update {
                         it.copy(
                             isLoading = false,

@@ -137,6 +137,7 @@ class AuthApi(
                         RefreshTokenRequest(
                             userid = session.userId.filter { it.isDigit() }.ifEmpty { session.userId },
                             authtoken = session.authToken,
+                            role = "user",
                         ),
                     ),
                 )

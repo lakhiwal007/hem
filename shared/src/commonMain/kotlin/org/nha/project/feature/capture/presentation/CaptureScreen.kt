@@ -47,7 +47,6 @@ import hem.shared.generated.resources.Res
 import hem.shared.generated.resources.add_more
 import hem.shared.generated.resources.capture
 import hem.shared.generated.resources.guidelines
-import hem.shared.generated.resources.location
 import hem.shared.generated.resources.retake
 import hem.shared.generated.resources.success
 import hem.shared.generated.resources.zoom
@@ -485,7 +484,6 @@ private fun ImageMetadataOverlay(
             fontWeight = FontWeight.Bold,
             color = Color.White,
         )
-
     }
 }
 

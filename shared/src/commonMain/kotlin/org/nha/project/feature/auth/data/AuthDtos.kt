@@ -81,7 +81,7 @@ data class LoginLogoutAuditRequest(
 data class RefreshTokenRequest(
     val userid: String,
     val authtoken: String,
-    val role: String = "user",
+    val role: String,
 )
 
 @Serializable
