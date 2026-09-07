@@ -11,4 +11,5 @@ internal object AuthApiUrls {
     const val VALIDATE = "$BASE_URL/authService/bis/auth/V3/validate"
     const val DECRYPT = "$BASE_URL/authService/bis/auth/V3/decrypt"
     const val AUDIT_LOGIN_LOGOUT = "$BASE_URL/authService/bis/auth/audit/storeLoginLogoutDetails"
+    const val REFRESH_TOKEN = "$BASE_URL/authService/bis/auth/token/refreshToken"
 }

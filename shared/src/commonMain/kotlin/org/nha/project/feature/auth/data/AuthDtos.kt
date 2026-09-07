@@ -78,6 +78,19 @@ data class LoginLogoutAuditRequest(
 )
 
 @Serializable
+data class RefreshTokenRequest(
+    val userid: String,
+    val authtoken: String,
+    val role: String = "user",
+)
+
+@Serializable
+data class RefreshTokenResponse(
+    val userid: String? = null,
+    val token: String? = null,
+)
+
+@Serializable
 data class EntityAppRole(
     val entityType: String,
     val parentEntityId: Long,

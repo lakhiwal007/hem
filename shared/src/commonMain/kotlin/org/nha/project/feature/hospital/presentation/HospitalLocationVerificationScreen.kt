@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -61,6 +62,12 @@ fun HospitalLocationVerificationScreen(
 ) {
     val viewModel = koinViewModel<HospitalLocationVerificationViewModel> { parametersOf(hospital) }
     val state by viewModel.uiState.collectAsState()
+
+    // Skip this screen entirely when already within range - only show it to surface an
+    // out-of-range mismatch that needs the user's attention.
+    LaunchedEffect(state.distanceMeters) {
+        if (state.isWithinRange) onContinue()
+    }
 
     HospitalLocationVerificationContent(
         hospital = hospital,

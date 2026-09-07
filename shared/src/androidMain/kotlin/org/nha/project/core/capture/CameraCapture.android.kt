@@ -27,7 +27,7 @@ private fun Bitmap.scaledDownIfNeeded(maxDimensionPx: Int): Bitmap {
 }
 
 /** Compresses to JPEG, stepping quality down until the result fits under [maxBytes]. */
-private fun Bitmap.compressUnder(maxBytes: Int): ByteArray {
+internal fun Bitmap.compressUnder(maxBytes: Int): ByteArray {
     var quality = 85
     var bytes: ByteArray
     do {

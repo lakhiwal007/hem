@@ -2,9 +2,12 @@ package org.nha.project.feature.auth.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -54,14 +57,13 @@ class LoginViewModel(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
+    private val _loginSuccessEvents = Channel<Unit>(Channel.BUFFERED)
+    val loginSuccessEvents: Flow<Unit> = _loginSuccessEvents.receiveAsFlow()
+
     private var clientToken: String? = null
     private var captcha1TransactionId: String? = null
     private var transactionId2: String? = null
     private var authTransaction: String? = null
-
-    init {
-        loadCaptcha1()
-    }
 
     fun onUserIdChange(value: String) {
         _uiState.update { it.copy(userIdInput = value) }
@@ -86,6 +88,8 @@ class LoginViewModel(
     }
 
     fun retryCaptcha1() {
+        clientToken = null
+        captcha1TransactionId = null
         transactionId2 = null
         authTransaction = null
         _uiState.update {
@@ -340,8 +344,9 @@ class LoginViewModel(
             )
         sessionStorage.save(session)
         authApi.storeLoginLogoutDetails(session, "Login")
-        _uiState.update { it.copy(isLoading = false, loginSuccess = true) }
+        _uiState.update { it.copy(isLoading = false) }
         toastController.success("Welcome back, ${profile.username}!")
+        _loginSuccessEvents.send(Unit)
     }
 
     private fun serverErrorMessage(

@@ -9,8 +9,11 @@ data class CaptureUiState(
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
     val finalSubmitAllowed: Boolean = true,
+    val requiredImageCount: Int? = null,
     val submitted: Boolean = false,
 ) {
     val canAddMore: Boolean get() = images.size < maxImages
     val canSubmit: Boolean get() = images.isNotEmpty() && !isSubmitting && finalSubmitAllowed
+    val remainingRequiredCount: Int?
+        get() = requiredImageCount?.let { (it - images.size).coerceAtLeast(0) }
 }

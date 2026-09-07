@@ -127,6 +127,33 @@ class AuthApi(
             }
         }
 
+    suspend fun refreshToken(session: UserSession): ApiResult<RefreshTokenResponse> =
+        runCatchingApi {
+            httpClient.post(AuthApiUrls.REFRESH_TOKEN) {
+                applyHemHeaders(session)
+                contentType(ContentType.Application.Json)
+                setBody(
+                    json.encodeToString(
+                        RefreshTokenRequest(
+                            userid = session.userId.filter { it.isDigit() }.ifEmpty { session.userId },
+                            authtoken = session.authToken,
+                        ),
+                    ),
+                )
+            }
+        }.let { result ->
+            when (result) {
+                is ApiResult.Success -> {
+                    try {
+                        ApiResult.Success(json.decodeFromString<RefreshTokenResponse>(result.data))
+                    } catch (e: Exception) {
+                        ApiResult.Error(NetworkException.Unknown(e))
+                    }
+                }
+                is ApiResult.Error -> result
+            }
+        }
+
     suspend fun storeLoginLogoutDetails(
         session: UserSession,
         action: String,

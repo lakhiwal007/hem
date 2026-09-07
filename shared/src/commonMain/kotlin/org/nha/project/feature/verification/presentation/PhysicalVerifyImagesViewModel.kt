@@ -50,14 +50,11 @@ class PhysicalVerifyImagesViewModel(
                     )
             ) {
                 is ApiResult.Success -> {
-                    val submission = result.data
                     val images =
-                        submission.images.mapIndexed { index, image ->
+                        result.data.mapIndexed { index, image ->
                             UploadedImage(label = image.fileName ?: "Image ${index + 1}")
                         }
-                    _uiState.update {
-                        it.copy(isLoading = false, submissionId = submission.submissionId, images = images)
-                    }
+                    _uiState.update { it.copy(isLoading = false, images = images) }
                 }
                 is ApiResult.Error -> {
                     _uiState.update { it.copy(isLoading = false) }

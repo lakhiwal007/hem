@@ -2,7 +2,6 @@ package org.nha.project.feature.auth.presentation
 
 data class LoginUiState(
     val isLoading: Boolean = false,
-    val loginSuccess: Boolean = false,
     // Step 1: user id + captcha1
     val captcha1Image: String? = null,
     val userIdInput: String = "",

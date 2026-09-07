@@ -14,5 +14,5 @@ val hospitalModule =
         viewModel { HospitalListViewModel(get(), get(), get(), get(), get()) }
         viewModel { params -> HospitalLocationVerificationViewModel(get(), get(), params.get()) }
         viewModel { params -> HospitalSpecialitiesViewModel(get(), get(), params.get()) }
-        viewModel { params -> HospitalServicesViewModel(get(), get(), params.get()) }
+        viewModel { params -> HospitalServicesViewModel(get(), get(), get(), params.get(), params.get()) }
     }

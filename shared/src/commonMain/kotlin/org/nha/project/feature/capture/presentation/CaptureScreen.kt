@@ -60,7 +60,9 @@ import org.nha.project.core.ui.components.Base64Image
 import org.nha.project.core.ui.components.BrandedHeader
 import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemPrimary
+import org.nha.project.core.ui.theme.HemSuccess
 import org.nha.project.core.ui.theme.HemTheme
+import org.nha.project.core.ui.theme.HemWarning
 import org.nha.project.feature.capture.domain.CapturedImage
 import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.Service
@@ -203,6 +205,8 @@ private fun CaptureContent(
                             AddMoreTile(onClick = onCapture)
                         }
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    UploadProgressStatus(state = state)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -296,12 +300,30 @@ private fun CapturedThumbnail(
     onZoom: () -> Unit,
 ) {
     Box(modifier = Modifier.size(96.dp)) {
-        Base64Image(
-            base64 = image.base64,
-            contentDescription = "Captured image",
-            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
-            contentScale = ContentScale.Crop,
-        )
+        val base64 = image.base64
+        if (base64 != null) {
+            Base64Image(
+                base64 = base64,
+                contentDescription = "Captured image",
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(HemPrimary.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(Res.drawable.capture),
+                    contentDescription = "Previously uploaded image",
+                    modifier = Modifier.size(36.dp),
+                )
+            }
+        }
         Image(
             painter = painterResource(Res.drawable.success),
             contentDescription = "Uploaded",
@@ -317,16 +339,18 @@ private fun CapturedThumbnail(
                     .size(20.dp)
                     .clickable(onClick = onRetake),
         )
-        Image(
-            painter = painterResource(Res.drawable.zoom),
-            contentDescription = "Zoom",
-            modifier =
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(4.dp)
-                    .size(20.dp)
-                    .clickable(onClick = onZoom),
-        )
+        if (base64 != null) {
+            Image(
+                painter = painterResource(Res.drawable.zoom),
+                contentDescription = "Zoom",
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(4.dp)
+                        .size(20.dp)
+                        .clickable(onClick = onZoom),
+            )
+        }
     }
 }
 
@@ -349,6 +373,26 @@ private fun AddMoreTile(onClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(text = "Add more", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+    }
+}
+
+@Composable
+private fun UploadProgressStatus(state: CaptureUiState) {
+    val remaining = state.remainingRequiredCount
+    val message =
+        when {
+            state.finalSubmitAllowed -> "All required images uploaded. You can now submit."
+            remaining != null && remaining > 0 ->
+                "Upload $remaining more ${if (remaining == 1) "image" else "images"} to enable submit."
+            else -> null
+        }
+    if (message != null) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = if (state.finalSubmitAllowed) HemSuccess else HemWarning,
+        )
     }
 }
 
@@ -383,6 +427,7 @@ private fun ImagePreviewDialog(
     image: CapturedImage,
     onDismiss: () -> Unit,
 ) {
+    val base64 = image.base64 ?: return
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -396,7 +441,7 @@ private fun ImagePreviewDialog(
             contentAlignment = Alignment.Center,
         ) {
             Base64Image(
-                base64 = image.base64,
+                base64 = base64,
                 contentDescription = "Captured image preview",
                 modifier = Modifier.fillMaxSize().padding(24.dp),
                 contentScale = ContentScale.Fit,
@@ -431,7 +476,7 @@ private fun ImageMetadataOverlay(
         modifier =
             modifier
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color.Black.copy(alpha = 0.55f))
+                .background(Color.Black.copy(alpha = 0.4f))
                 .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
         Text(
@@ -440,20 +485,7 @@ private fun ImageMetadataOverlay(
             fontWeight = FontWeight.Bold,
             color = Color.White,
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(Res.drawable.location),
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = image.location?.let { formatLiveLocation(it) } ?: "Live location unavailable",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.9f),
-            )
-        }
+
     }
 }
 

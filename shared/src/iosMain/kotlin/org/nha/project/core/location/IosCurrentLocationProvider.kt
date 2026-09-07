@@ -17,7 +17,8 @@ class IosCurrentLocationProvider : CurrentLocationProvider {
     override suspend fun getCurrentLocation(): LocationResult {
         val manager = CLLocationManager()
         val status = manager.authorizationStatus
-        val authorized = status == kCLAuthorizationStatusAuthorizedAlways || status == kCLAuthorizationStatusAuthorizedWhenInUse
+        val authorized =
+            status == kCLAuthorizationStatusAuthorizedAlways || status == kCLAuthorizationStatusAuthorizedWhenInUse
         if (!authorized) return LocationResult.PermissionDenied
         if (!CLLocationManager.locationServicesEnabled()) return LocationResult.ProviderDisabled
 

@@ -8,5 +8,7 @@ import org.nha.project.feature.capture.presentation.CaptureViewModel
 val captureModule =
     module {
         single { CaptureApi(get(), get()) }
-        viewModel { params -> CaptureViewModel(get(), get(), get(), get(), params.get(), params.get(), params.get()) }
+        viewModel { params ->
+            CaptureViewModel(get(), get(), get(), get(), get(), params.get(), params.get(), params.get())
+        }
     }

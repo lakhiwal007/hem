@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,17 +44,23 @@ import org.koin.core.parameter.parametersOf
 import org.nha.project.core.ui.components.BrandedHeader
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
+import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.Service
 import org.nha.project.feature.hospital.domain.Speciality
 
 @Composable
 fun HospitalServicesScreen(
+    hospital: Hospital,
     speciality: Speciality,
     onBack: () -> Unit,
     onServiceClick: (Service) -> Unit,
 ) {
-    val viewModel = koinViewModel<HospitalServicesViewModel> { parametersOf(speciality) }
+    val viewModel = koinViewModel<HospitalServicesViewModel> { parametersOf(hospital, speciality) }
     val state by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadServices()
+    }
 
     HospitalServicesContent(
         specialityName = speciality.description,

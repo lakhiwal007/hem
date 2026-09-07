@@ -61,7 +61,7 @@ class CaptureApi(
         hospId: Long,
         specialityId: Long,
         serviceId: Long,
-    ): ApiResult<SubmissionDto> =
+    ): ApiResult<List<ViewImageDto>> =
         request { session ->
             httpClient.get(CaptureApiUrls.VIEW_IMAGES) {
                 applyHemHeaders(session)

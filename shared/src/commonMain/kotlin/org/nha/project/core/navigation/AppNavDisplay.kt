@@ -1,6 +1,7 @@
 package org.nha.project.core.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -10,6 +11,7 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import androidx.savedstate.serialization.SavedStateConfiguration
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.modules.SerializersModule
@@ -18,6 +20,8 @@ import kotlinx.serialization.modules.subclass
 import org.koin.compose.koinInject
 import org.nha.project.core.location.HospitalDistanceGuard
 import org.nha.project.core.location.LocationGuard
+import org.nha.project.core.network.ApiResult
+import org.nha.project.feature.auth.data.AuthApi
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.auth.domain.isPhysicalVerifier
 import org.nha.project.feature.auth.presentation.LoginScreen
@@ -67,13 +71,31 @@ private val routeSavedStateConfig =
             }
     }
 
+private const val TOKEN_REFRESH_INTERVAL_MILLIS = 5 * 60 * 1000L
+
 @Composable
 fun AppNavDisplay() {
     val backStack = rememberNavBackStack(routeSavedStateConfig, Route.Splash)
     val sessionStorage = koinInject<SessionStorage>()
+    val authApi = koinInject<AuthApi>()
     val coroutineScope = rememberCoroutineScope()
     val session by sessionStorage.session.collectAsState(initial = null)
     val isPhysicalVerifier = session?.isPhysicalVerifier() == true
+
+    LaunchedEffect(session != null) {
+        if (session == null) return@LaunchedEffect
+        while (true) {
+            delay(TOKEN_REFRESH_INTERVAL_MILLIS)
+            val currentSession = sessionStorage.session.first() ?: return@LaunchedEffect
+            val result = authApi.refreshToken(currentSession)
+            if (result is ApiResult.Success) {
+                val newToken = result.data.token
+                if (newToken != null) {
+                    sessionStorage.save(currentSession.copy(authToken = newToken))
+                }
+            }
+        }
+    }
 
     val currentRoute = backStack.lastOrNull() as? Route
 
@@ -132,6 +154,11 @@ fun AppNavDisplay() {
                                 hospital = route.hospital,
                                 onCancel = { backStack.removeLastOrNull() },
                                 onContinue = {
+                                    // Replace this entry rather than pushing on top of it - it's an
+                                    // auto-skipping gate, not a real page, so it must not linger in
+                                    // the backstack where a Back press would land on it and instantly
+                                    // bounce forward again.
+                                    backStack.removeLastOrNull()
                                     backStack.add(
                                         if (isPhysicalVerifier) {
                                             Route.HospitalOtpVerification(route.hospital)
@@ -160,6 +187,7 @@ fun AppNavDisplay() {
                         }
                         entry<Route.HospitalServices> { route ->
                             HospitalServicesScreen(
+                                hospital = route.hospital,
                                 speciality = route.speciality,
                                 onBack = { backStack.removeLastOrNull() },
                                 onServiceClick = { service ->

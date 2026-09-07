@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,9 +78,14 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     val viewModel = koinViewModel<LoginViewModel>()
     val state by viewModel.uiState.collectAsState()
 
-    if (state.loginSuccess) {
-        onLoginSuccess()
-        return
+    LaunchedEffect(viewModel) {
+        viewModel.loginSuccessEvents.collect { onLoginSuccess() }
+    }
+
+    // The Login screen's ViewModel can be reused across a logout (the nav backstack entry for
+    // this route never truly leaves), so force a clean form + fresh captcha on every entry.
+    LaunchedEffect(Unit) {
+        viewModel.retryCaptcha1()
     }
 
     LoginContent(
@@ -112,7 +118,7 @@ private fun LoginContent(
     val uriHandler = LocalUriHandler.current
     LoadingOverlay(
         isLoading = state.isLoading,
-        modifier = Modifier.fillMaxSize().verticalScroll(state = ScrollState(initial = 0)),
+        modifier = Modifier.fillMaxSize(),
     ) {
         Image(
             painter = painterResource(Res.drawable.onboarding_screen_background),
@@ -124,6 +130,7 @@ private fun LoginContent(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .verticalScroll(state = ScrollState(initial = 0))
                     .padding(horizontal = 24.dp)
                     .padding(top = 48.dp, bottom = 24.dp),
         ) {

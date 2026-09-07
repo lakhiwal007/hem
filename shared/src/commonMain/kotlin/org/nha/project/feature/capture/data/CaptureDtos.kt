@@ -54,3 +54,12 @@ data class SubmissionImageDto(
     val uploadedBy: String? = null,
     val uploadedOn: String? = null,
 )
+
+@Serializable
+data class ViewImageDto(
+    val imageId: Long? = null,
+    val imageSlot: Int? = null,
+    val imageVersion: Int? = null,
+    val fileName: String? = null,
+    val base64Image: String? = null,
+)
