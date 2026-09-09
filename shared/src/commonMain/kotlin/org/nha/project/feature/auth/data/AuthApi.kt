@@ -14,10 +14,13 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.json.Json
 import org.nha.project.core.network.ApiResult
 import org.nha.project.core.network.NetworkException
+import org.nha.project.core.network.SessionExpiryNotifier
 import org.nha.project.core.network.applyCommonHeaders
 import org.nha.project.core.network.applyHemHeaders
+import org.nha.project.core.network.isUnauthorized
 import org.nha.project.core.secrets.AppSecrets
 import org.nha.project.core.security.IdamCrypto
+import org.nha.project.core.security.SessionCrypto
 import org.nha.project.feature.auth.domain.UserSession
 import org.nha.project.getPlatform
 import kotlin.time.Clock
@@ -30,6 +33,7 @@ private const val AUDIT_BROWSER_NAME = "Chrome,134.0.0.0"
 
 class AuthApi(
     private val httpClient: HttpClient,
+    private val sessionExpiryNotifier: SessionExpiryNotifier,
     private val json: Json = Json { ignoreUnknownKeys = true },
 ) {
     @OptIn(ExperimentalUuidApi::class)
@@ -127,6 +131,22 @@ class AuthApi(
             }
         }
 
+    suspend fun logoutAllSessions(
+        token: String,
+        transactionId: String,
+    ): ApiResult<String> =
+        runCatchingApi {
+            httpClient.post(AuthApiUrls.SESSION_LOGOUT) {
+                applyCommonHeaders()
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $token")
+                    append(HttpHeaders.ContentType, "application/json; charset=UTF-8")
+                    append("Request-Agent", REQUEST_AGENT)
+                }
+                setBody(SessionCrypto.encrypt(AppSecrets.LOGOUT_SESSION_KEY, transactionId))
+            }
+        }
+
     suspend fun refreshToken(session: UserSession): ApiResult<RefreshTokenResponse> =
         runCatchingApi {
             httpClient.post(AuthApiUrls.REFRESH_TOKEN) {
@@ -142,18 +162,19 @@ class AuthApi(
                     ),
                 )
             }
-        }.let { result ->
-            when (result) {
-                is ApiResult.Success -> {
-                    try {
-                        ApiResult.Success(json.decodeFromString<RefreshTokenResponse>(result.data))
-                    } catch (e: Exception) {
-                        ApiResult.Error(NetworkException.Unknown(e))
+        }.also { result -> notifyIfUnauthorized(result, session) }
+            .let { result ->
+                when (result) {
+                    is ApiResult.Success -> {
+                        try {
+                            ApiResult.Success(json.decodeFromString<RefreshTokenResponse>(result.data))
+                        } catch (e: Exception) {
+                            ApiResult.Error(NetworkException.Unknown(e))
+                        }
                     }
+                    is ApiResult.Error -> result
                 }
-                is ApiResult.Error -> result
             }
-        }
 
     suspend fun storeLoginLogoutDetails(
         session: UserSession,
@@ -178,7 +199,16 @@ class AuthApi(
                     ),
                 )
             }
+        }.also { result -> notifyIfUnauthorized(result, session) }
+
+    private fun notifyIfUnauthorized(
+        result: ApiResult<String>,
+        session: UserSession,
+    ) {
+        if (result is ApiResult.Error && result.exception.isUnauthorized()) {
+            sessionExpiryNotifier.notifyUnauthorized(session.authToken)
         }
+    }
 
     private suspend inline fun <reified T> postJson(
         url: String,

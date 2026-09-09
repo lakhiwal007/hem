@@ -14,6 +14,7 @@ data class LoginUiState(
     val otpInput: String = "",
     val captcha2Input: String = "",
     val initMessage: String? = null,
+    val showAlreadyLoggedInSheet: Boolean = false,
 ) {
     val isStepTwoVisible: Boolean get() = verifiedUserId != null
 }

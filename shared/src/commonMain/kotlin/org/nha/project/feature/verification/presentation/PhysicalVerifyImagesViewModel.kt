@@ -21,6 +21,17 @@ import org.nha.project.feature.verification.data.VerifierApi
 
 private const val VERIFICATION_STATUS_APPROVED = "APPROVED"
 private const val VERIFICATION_STATUS_REJECTED = "REJECTED"
+private const val VERIFICATION_STATUS_PENDING = "PENDING"
+
+private fun isDecided(verificationStatus: String?): Boolean =
+    !verificationStatus.isNullOrBlank() && !verificationStatus.equals(VERIFICATION_STATUS_PENDING, ignoreCase = true)
+
+private fun actionFor(verificationStatus: String?): VerificationAction? =
+    when {
+        verificationStatus.equals(VERIFICATION_STATUS_APPROVED, ignoreCase = true) -> VerificationAction.RECOMMENDED
+        verificationStatus.equals(VERIFICATION_STATUS_REJECTED, ignoreCase = true) -> VerificationAction.NOT_RECOMMENDED
+        else -> null
+    }
 
 class PhysicalVerifyImagesViewModel(
     private val verifierApi: VerifierApi,
@@ -31,7 +42,15 @@ class PhysicalVerifyImagesViewModel(
     private val speciality: Speciality,
     private val service: Service,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(PhysicalVerifyImagesUiState(serviceName = service.name))
+    private val _uiState =
+        MutableStateFlow(
+            PhysicalVerifyImagesUiState(
+                serviceName = service.name,
+                comments = service.verifierComments.orEmpty(),
+                action = actionFor(service.verificationStatus),
+                isReadOnly = isDecided(service.verificationStatus),
+            ),
+        )
     val uiState: StateFlow<PhysicalVerifyImagesUiState> = _uiState.asStateFlow()
 
     init {
@@ -52,9 +71,13 @@ class PhysicalVerifyImagesViewModel(
                 is ApiResult.Success -> {
                     val images =
                         result.data.mapIndexed { index, image ->
-                            UploadedImage(label = image.fileName ?: "Image ${index + 1}")
+                            UploadedImage(
+                                label = image.fileName ?: "Image ${index + 1}",
+                                base64 = image.base64Image,
+                            )
                         }
-                    _uiState.update { it.copy(isLoading = false, images = images) }
+                    val submissionId = result.data.firstNotNullOfOrNull { it.submissionId }
+                    _uiState.update { it.copy(isLoading = false, images = images, submissionId = submissionId) }
                 }
                 is ApiResult.Error -> {
                     _uiState.update { it.copy(isLoading = false) }
@@ -65,16 +88,21 @@ class PhysicalVerifyImagesViewModel(
     }
 
     fun updateComments(value: String) {
+        if (_uiState.value.isReadOnly) return
         _uiState.update { it.copy(comments = value) }
     }
 
     fun updateAction(value: VerificationAction) {
+        if (_uiState.value.isReadOnly) return
         _uiState.update { it.copy(action = value) }
     }
 
     fun submit() {
         val state = _uiState.value
+        if (state.isReadOnly) return
         val submissionId = state.submissionId ?: return
+        val action = state.action ?: return
+        if (state.comments.isBlank()) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
             val session = sessionStorage.session.first()
@@ -85,7 +113,7 @@ class PhysicalVerifyImagesViewModel(
                     specialityId = speciality.id,
                     serviceId = service.id,
                     verificationStatus =
-                        if (state.action == VerificationAction.RECOMMENDED) {
+                        if (action == VerificationAction.RECOMMENDED) {
                             VERIFICATION_STATUS_APPROVED
                         } else {
                             VERIFICATION_STATUS_REJECTED

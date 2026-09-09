@@ -65,8 +65,8 @@ fun HospitalOutOfRangeSheet(
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text =
-                "Please go to the hospital facility to continue. We're tracking your location " +
-                    "in real time — this message will go away once you're back in range.",
+                "Please go to the hospital facility to continue. " +
+                    "This message will go away once you're back in range.",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             textAlign = TextAlign.Center,

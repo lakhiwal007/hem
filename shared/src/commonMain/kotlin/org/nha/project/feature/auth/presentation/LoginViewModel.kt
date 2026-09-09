@@ -23,6 +23,8 @@ import org.nha.project.feature.auth.data.EntityAppRole
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.auth.domain.UserSession
 
+private const val ALREADY_LOGGED_IN_ERROR_CODE = "BIS0101"
+
 private val ALLOWED_AUTH_MODES = setOf("Password", "Aadhaar_OTP", "Mobile_OTP")
 
 private val ALLOWED_HEM_ROLES = setOf("ADMIN", "PHYSICALVERIFIER")
@@ -213,7 +215,39 @@ class LoginViewModel(
                 }
                 is ApiResult.Error -> {
                     _uiState.update { it.copy(isLoading = false) }
-                    toastController.error(serverErrorMessage(result.exception, "Incorrect OTP or captcha."))
+                    if ((result.exception as? NetworkException.ApiError)?.code == ALREADY_LOGGED_IN_ERROR_CODE) {
+                        _uiState.update { it.copy(showAlreadyLoggedInSheet = true) }
+                    } else {
+                        toastController.error(serverErrorMessage(result.exception, "Incorrect OTP or captcha."))
+                    }
+                }
+            }
+        }
+    }
+
+    fun dismissAlreadyLoggedInSheet() {
+        _uiState.update { it.copy(showAlreadyLoggedInSheet = false) }
+    }
+
+    fun logoutAllSessionsAndRetry() {
+        val txId2 = transactionId2
+        if (txId2 == null) {
+            _uiState.update { it.copy(showAlreadyLoggedInSheet = false) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, showAlreadyLoggedInSheet = false) }
+            when (val result = callWithTokenRetry { token -> authApi.logoutAllSessions(token, txId2) }) {
+                is ApiResult.Success -> {
+                    toastController.success("Logged out from all sessions. Please login again.")
+                    retryCaptcha1()
+                }
+                is ApiResult.Error -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    toastController.error(
+                        serverErrorMessage(result.exception, "Could not logout other sessions. Please try again."),
+                    )
                 }
             }
         }

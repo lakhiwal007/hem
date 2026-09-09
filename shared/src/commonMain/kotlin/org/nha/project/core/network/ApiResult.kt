@@ -36,3 +36,5 @@ sealed class NetworkException(
         cause: Throwable? = null,
     ) : NetworkException(cause?.message ?: "Unknown network error", cause)
 }
+
+fun NetworkException.isUnauthorized(): Boolean = this is NetworkException.ServerError && code == 401

@@ -14,4 +14,5 @@ enum class VerificationAction(
 data class UploadedImage(
     val label: String,
     val drawable: DrawableResource = Res.drawable.capture,
+    val base64: String? = null,
 )

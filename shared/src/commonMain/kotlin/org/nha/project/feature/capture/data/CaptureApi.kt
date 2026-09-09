@@ -13,7 +13,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.nha.project.core.network.ApiResult
 import org.nha.project.core.network.NetworkException
+import org.nha.project.core.network.SessionExpiryNotifier
 import org.nha.project.core.network.applyHemHeaders
+import org.nha.project.core.network.isUnauthorized
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.auth.domain.UserSession
 
@@ -22,6 +24,7 @@ private const val ATTACHMENT_DATA_URI_PREFIX = "data:image/jpeg;base64,"
 class CaptureApi(
     private val httpClient: HttpClient,
     private val sessionStorage: SessionStorage,
+    private val sessionExpiryNotifier: SessionExpiryNotifier,
     private val json: Json = Json { ignoreUnknownKeys = true },
 ) {
     suspend fun uploadImage(
@@ -87,7 +90,9 @@ class CaptureApi(
             if (response.status.value == 200) {
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error(NetworkException.ServerError(response.status.value, response.bodyAsText()))
+                ApiResult
+                    .Error(NetworkException.ServerError(response.status.value, response.bodyAsText()))
+                    .also { notifyIfUnauthorized(it, session) }
             }
         } catch (e: Exception) {
             ApiResult.Error(NetworkException.Unknown(e))
@@ -105,10 +110,21 @@ class CaptureApi(
                     ApiResult.Error(NetworkException.Unknown(e))
                 }
             } else {
-                ApiResult.Error(NetworkException.ServerError(response.status.value, response.bodyAsText()))
+                ApiResult
+                    .Error(NetworkException.ServerError(response.status.value, response.bodyAsText()))
+                    .also { notifyIfUnauthorized(it, session) }
             }
         } catch (e: Exception) {
             ApiResult.Error(NetworkException.Unknown(e))
+        }
+    }
+
+    private fun notifyIfUnauthorized(
+        result: ApiResult<*>,
+        session: UserSession,
+    ) {
+        if (result is ApiResult.Error && result.exception.isUnauthorized()) {
+            sessionExpiryNotifier.notifyUnauthorized(session.authToken)
         }
     }
 }

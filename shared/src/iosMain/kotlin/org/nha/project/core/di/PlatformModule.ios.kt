@@ -4,7 +4,9 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import org.nha.project.core.capture.ImageEditor
 import org.nha.project.core.capture.ImageMetadataStamper
+import org.nha.project.core.capture.IosImageEditor
 import org.nha.project.core.capture.IosImageMetadataStamper
 import org.nha.project.core.location.CurrentLocationProvider
 import org.nha.project.core.location.IosCurrentLocationProvider
@@ -21,4 +23,5 @@ actual val platformModule: Module =
         single<LocationAccessChecker> { IosLocationAccessChecker() }
         single<CurrentLocationProvider> { IosCurrentLocationProvider() }
         single<ImageMetadataStamper> { IosImageMetadataStamper() }
+        single<ImageEditor> { IosImageEditor() }
     }

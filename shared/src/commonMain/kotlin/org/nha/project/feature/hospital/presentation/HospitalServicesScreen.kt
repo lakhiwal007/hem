@@ -131,7 +131,7 @@ private fun ServiceCard(
     service: Service,
     onClick: () -> Unit,
 ) {
-    val backgroundColor = if (service.hasUploadedImages) Color(0xFFF0F0F0) else MaterialTheme.colorScheme.surface
+    val backgroundColor = if (service.showCheckmark) Color(0xFFF0F0F0) else MaterialTheme.colorScheme.surface
     Row(
         modifier =
             Modifier
@@ -139,7 +139,7 @@ private fun ServiceCard(
                 .clip(RoundedCornerShape(10.dp))
                 .background(backgroundColor)
                 .let {
-                    if (service.hasUploadedImages) {
+                    if (service.showCheckmark) {
                         it
                     } else {
                         it.border(
@@ -159,7 +159,7 @@ private fun ServiceCard(
             color = Color.DarkGray,
             modifier = Modifier.weight(1f),
         )
-        if (service.hasUploadedImages) {
+        if (service.showCheckmark) {
             Image(
                 painter = painterResource(Res.drawable.success),
                 contentDescription = "Images uploaded",
@@ -185,7 +185,7 @@ private fun HospitalServicesScreenPreview() {
                 HospitalServicesUiState(
                     services =
                         listOf(
-                            Service(name = "Heart Lung Machines", hasUploadedImages = true),
+                            Service(name = "Heart Lung Machines", showCheckmark = true),
                             Service(name = "Blood Gas And Electrolyte Analysers"),
                             Service(name = "OT"),
                             Service(name = "ICU"),

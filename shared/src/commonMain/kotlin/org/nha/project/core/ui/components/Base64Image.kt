@@ -11,7 +11,7 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @OptIn(ExperimentalEncodingApi::class)
-private fun decodeBase64Image(base64: String): ImageBitmap? =
+fun decodeBase64Image(base64: String): ImageBitmap? =
     try {
         val cleaned = base64.substringAfter("base64,", base64)
         val bytes = Base64.decode(cleaned)

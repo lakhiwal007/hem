@@ -5,7 +5,9 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import org.koin.core.module.Module
 import org.koin.dsl.module
+import org.nha.project.core.capture.AndroidImageEditor
 import org.nha.project.core.capture.AndroidImageMetadataStamper
+import org.nha.project.core.capture.ImageEditor
 import org.nha.project.core.capture.ImageMetadataStamper
 import org.nha.project.core.location.AndroidCurrentLocationProvider
 import org.nha.project.core.location.AndroidLocationAccessChecker
@@ -25,4 +27,5 @@ actual val platformModule: Module =
         single<LocationAccessChecker> { AndroidLocationAccessChecker(get()) }
         single<CurrentLocationProvider> { AndroidCurrentLocationProvider(get()) }
         single<ImageMetadataStamper> { AndroidImageMetadataStamper(get()) }
+        single<ImageEditor> { AndroidImageEditor() }
     }

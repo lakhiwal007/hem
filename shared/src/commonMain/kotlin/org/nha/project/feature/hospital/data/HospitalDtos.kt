@@ -39,14 +39,11 @@ data class SpecialityDto(
 
 @Serializable
 data class ServiceDto(
-    val id: Long? = null,
-    val specialityId: Long? = null,
-    val specialityCode: String? = null,
-    val specialityName: String? = null,
-    val services: String? = null,
-    val schemeCode: String? = null,
-    val activeStatus: Int? = null,
-    val mandatory: String? = null,
+    val serviceId: Long? = null,
+    val serviceName: String? = null,
+    val submissionStatus: String? = null,
+    val verificationStatus: String? = null,
+    val verifierComments: String? = null,
 )
 
 fun HospitalGroupDto.toDomain(): List<Hospital> = hospitals.mapNotNull { it.toDomain(statusFlag) }
@@ -56,11 +53,7 @@ private fun HospitalDto.toDomain(groupStatusFlag: String?): Hospital? {
     val longitude = hospLongitude?.toDoubleOrNull() ?: return null
     val flag = groupStatusFlag ?: statusFlag
     val status =
-        if (flag.equals(
-                "Empanelled",
-                ignoreCase = true,
-            )
-        ) {
+        if (flag.equals("Empanelled", ignoreCase = true)) {
             HospitalStatus.EMPANELLED
         } else {
             HospitalStatus.IN_PROGRESS
@@ -87,9 +80,26 @@ fun List<SpecialityDto>.toSpecialities(): List<Speciality> =
         }
     }.distinctBy { it.id }
 
-fun List<ServiceDto>.toServices(): List<Service> =
+fun List<ServiceDto>.toServices(
+    specialityId: Long,
+    isPhysicalVerifier: Boolean,
+): List<Service> =
     mapNotNull { dto ->
-        val name = dto.services?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-        val id = dto.id ?: return@mapNotNull null
-        Service(name = name, id = id, specialityId = dto.specialityId ?: 0L)
+        val name = dto.serviceName?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        val id = dto.serviceId ?: return@mapNotNull null
+        val showCheckmark =
+            if (isPhysicalVerifier) {
+                // "PENDING" means not yet verified - only a decided status (approved/rejected) checks off.
+                !dto.verificationStatus.isNullOrBlank() && !dto.verificationStatus.equals("PENDING", ignoreCase = true)
+            } else {
+                dto.submissionStatus.equals("SUBMITTED", ignoreCase = true)
+            }
+        Service(
+            name = name,
+            id = id,
+            specialityId = specialityId,
+            showCheckmark = showCheckmark,
+            verificationStatus = dto.verificationStatus,
+            verifierComments = dto.verifierComments,
+        )
     }.distinctBy { it.id }

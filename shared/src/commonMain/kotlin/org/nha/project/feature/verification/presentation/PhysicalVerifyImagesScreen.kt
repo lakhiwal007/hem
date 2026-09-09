@@ -53,10 +53,13 @@ import hem.shared.generated.resources.zoom
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import org.nha.project.core.ui.components.Base64Image
 import org.nha.project.core.ui.components.BrandedHeader
 import org.nha.project.core.ui.components.LoadingOverlay
+import org.nha.project.core.ui.theme.HemError
 import org.nha.project.core.ui.theme.HemFocusBorder
 import org.nha.project.core.ui.theme.HemPrimary
+import org.nha.project.core.ui.theme.HemSuccess
 import org.nha.project.core.ui.theme.HemTheme
 import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.Service
@@ -143,6 +146,11 @@ private fun PhysicalVerifyImagesContent(
                     color = Color.Gray,
                 )
 
+                if (state.isReadOnly) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    VerificationDecidedBanner(action = state.action)
+                }
+
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
                     text = "Images uploaded by Hospital",
@@ -159,7 +167,7 @@ private fun PhysicalVerifyImagesContent(
 
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Comments",
+                    text = "Comments*",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = HemPrimary,
@@ -168,6 +176,7 @@ private fun PhysicalVerifyImagesContent(
                 OutlinedTextField(
                     value = state.comments,
                     onValueChange = onCommentsChange,
+                    enabled = !state.isReadOnly,
                     placeholder = { Text("Type here") },
                     modifier = Modifier.fillMaxWidth().height(100.dp),
                     shape = RoundedCornerShape(10.dp),
@@ -181,26 +190,28 @@ private fun PhysicalVerifyImagesContent(
                     color = HemPrimary,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                ActionDropdown(selected = state.action, onSelected = onActionChange)
+                ActionDropdown(selected = state.action, enabled = !state.isReadOnly, onSelected = onActionChange)
 
                 Spacer(modifier = Modifier.height(28.dp))
-                Button(
-                    onClick = onSubmit,
-                    enabled = state.canSubmit,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = HemPrimary),
-                ) {
-                    Text("SUBMIT", fontWeight = FontWeight.Bold)
+                if (!state.isReadOnly) {
+                    Button(
+                        onClick = onSubmit,
+                        enabled = state.canSubmit,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = HemPrimary),
+                    ) {
+                        Text("SUBMIT", fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
-                Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(
                     onClick = onCancel,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = HemPrimary),
                 ) {
-                    Text("CANCEL", fontWeight = FontWeight.Bold)
+                    Text(if (state.isReadOnly) "BACK" else "CANCEL", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -218,12 +229,22 @@ private fun UploadedImageThumbnail(
     onZoom: () -> Unit,
 ) {
     Box(modifier = Modifier.size(96.dp)) {
-        Image(
-            painter = painterResource(image.drawable),
-            contentDescription = image.label,
-            modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
-            contentScale = ContentScale.Crop,
-        )
+        val base64 = image.base64
+        if (base64 != null) {
+            Base64Image(
+                base64 = base64,
+                contentDescription = image.label,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        } else {
+            Image(
+                painter = painterResource(image.drawable),
+                contentDescription = image.label,
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                contentScale = ContentScale.Crop,
+            )
+        }
         Image(
             painter = painterResource(Res.drawable.zoom),
             contentDescription = "Zoom",
@@ -254,12 +275,22 @@ private fun UploadedImageZoomDialog(
                     .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
-            Image(
-                painter = painterResource(image.drawable),
-                contentDescription = image.label,
-                modifier = Modifier.fillMaxSize().padding(24.dp),
-                contentScale = ContentScale.Fit,
-            )
+            val base64 = image.base64
+            if (base64 != null) {
+                Base64Image(
+                    base64 = base64,
+                    contentDescription = image.label,
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                Image(
+                    painter = painterResource(image.drawable),
+                    contentDescription = image.label,
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
             Text(
                 text = image.label,
                 style = MaterialTheme.typography.bodyMedium,
@@ -280,18 +311,24 @@ private fun UploadedImageZoomDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ActionDropdown(
-    selected: VerificationAction,
+    selected: VerificationAction?,
     onSelected: (VerificationAction) -> Unit,
+    enabled: Boolean = true,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    ExposedDropdownMenuBox(
+        expanded = expanded && enabled,
+        onExpandedChange = { if (enabled) expanded = it },
+    ) {
         OutlinedTextField(
-            value = selected.label,
+            value = selected?.label.orEmpty(),
             onValueChange = {},
+            placeholder = { Text("Select action") },
             readOnly = true,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
             shape = RoundedCornerShape(10.dp),
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded && enabled) },
             colors =
                 OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
@@ -299,7 +336,7 @@ private fun ActionDropdown(
                     focusedBorderColor = HemFocusBorder,
                 ),
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
             VerificationAction.entries.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
@@ -310,6 +347,30 @@ private fun ActionDropdown(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun VerificationDecidedBanner(action: VerificationAction?) {
+    val (label, color) =
+        when (action) {
+            VerificationAction.RECOMMENDED -> "Already approved" to HemSuccess
+            VerificationAction.NOT_RECOMMENDED -> "Already rejected" to HemError
+            null -> "Already verified" to HemFocusBorder
+        }
+    Box(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(color.copy(alpha = 0.1f))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = color,
+        )
     }
 }
 

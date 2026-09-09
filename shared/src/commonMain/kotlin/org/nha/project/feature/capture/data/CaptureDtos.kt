@@ -62,4 +62,5 @@ data class ViewImageDto(
     val imageVersion: Int? = null,
     val fileName: String? = null,
     val base64Image: String? = null,
+    val submissionId: Long? = null,
 )

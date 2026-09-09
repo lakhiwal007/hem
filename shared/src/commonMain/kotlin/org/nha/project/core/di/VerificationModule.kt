@@ -8,7 +8,7 @@ import org.nha.project.feature.verification.presentation.PhysicalVerifyImagesVie
 
 val verificationModule =
     module {
-        single { VerifierApi(get(), get()) }
+        single { VerifierApi(get(), get(), get()) }
         viewModel { params -> HospitalOtpVerificationViewModel(get(), get(), params.get()) }
         viewModel { params ->
             PhysicalVerifyImagesViewModel(get(), get(), get(), get(), params.get(), params.get(), params.get())

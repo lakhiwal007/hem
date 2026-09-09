@@ -92,11 +92,11 @@ fun CaptureScreen(
     }
 
     var pendingRetakeIndex by remember { mutableStateOf<Int?>(null) }
+    var pendingEdit by remember { mutableStateOf<PendingEditImage?>(null) }
     val captureImage =
         rememberCameraCapture(onResult = { base64 ->
             if (base64 != null) {
-                val index = pendingRetakeIndex
-                if (index != null) viewModel.retakeImage(index, base64) else viewModel.addImage(base64)
+                pendingEdit = PendingEditImage(base64 = base64, retakeIndex = pendingRetakeIndex)
             }
             pendingRetakeIndex = null
         })
@@ -122,7 +122,25 @@ fun CaptureScreen(
     if (zoomed != null) {
         ImagePreviewDialog(image = zoomed, onDismiss = { zoomedImage = null })
     }
+
+    val edit = pendingEdit
+    if (edit != null) {
+        ImageEditDialog(
+            base64 = edit.base64,
+            onConfirm = { finalBase64 ->
+                val index = edit.retakeIndex
+                if (index != null) viewModel.retakeImage(index, finalBase64) else viewModel.addImage(finalBase64)
+                pendingEdit = null
+            },
+            onCancel = { pendingEdit = null },
+        )
+    }
 }
+
+private data class PendingEditImage(
+    val base64: String,
+    val retakeIndex: Int?,
+)
 
 @Composable
 private fun CaptureContent(

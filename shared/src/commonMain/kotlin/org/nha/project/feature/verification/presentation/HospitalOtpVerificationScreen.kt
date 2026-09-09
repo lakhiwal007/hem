@@ -2,11 +2,7 @@ package org.nha.project.feature.verification.presentation
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,8 +11,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -27,10 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,6 +36,7 @@ import org.koin.core.parameter.parametersOf
 import org.nha.project.core.location.GeoPoint
 import org.nha.project.core.ui.components.BrandedHeader
 import org.nha.project.core.ui.components.LoadingOverlay
+import org.nha.project.core.ui.components.OtpInputFields
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
 import org.nha.project.feature.hospital.domain.Hospital
@@ -116,7 +108,7 @@ private fun HospitalOtpVerificationContent(
                     color = HemPrimary,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OtpBoxInput(value = state.otp, onValueChange = onOtpChange)
+                OtpInputFields(value = state.otp, onValueChange = onOtpChange, length = OTP_LENGTH)
 
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
@@ -151,47 +143,6 @@ private fun HospitalOtpVerificationContent(
                 onDismiss = onDismissResult,
             )
         null -> Unit
-    }
-}
-
-@Composable
-private fun OtpBoxInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    length: Int = OTP_LENGTH,
-) {
-    Box(contentAlignment = Alignment.CenterStart) {
-        BasicTextField(
-            value = value,
-            onValueChange = { new -> if (new.length <= length && new.all(Char::isDigit)) onValueChange(new) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            textStyle = TextStyle(color = Color.Transparent),
-            cursorBrush = SolidColor(Color.Transparent),
-            modifier = Modifier.fillMaxWidth().height(48.dp),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(length) { index ->
-                val char = value.getOrNull(index)?.toString()
-                Box(
-                    modifier =
-                        Modifier
-                            .size(44.dp)
-                            .border(
-                                width = 1.dp,
-                                color = HemPrimary.copy(alpha = 0.25f),
-                                shape = RoundedCornerShape(8.dp),
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = char ?: "*",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (char != null) Color.DarkGray else Color.LightGray,
-                    )
-                }
-            }
-        }
     }
 }
 

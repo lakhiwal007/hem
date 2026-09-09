@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
@@ -53,6 +54,8 @@ import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.HospitalStatus
 import kotlin.math.round
 import kotlin.math.roundToInt
+
+private const val NHPR_URL = "https://nhpr.abdm.gov.in/nhpr/v4/home"
 
 @Composable
 fun HospitalLocationVerificationScreen(
@@ -165,7 +168,7 @@ private fun HospitalLocationVerificationContent(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        VerificationBanner(isWithinRange = state.isWithinRange, onUpdateLocation = onRetry)
+                        VerificationBanner(isWithinRange = state.isWithinRange)
 
                         Spacer(modifier = Modifier.height(20.dp))
                         if (state.isWithinRange) {
@@ -249,11 +252,9 @@ private fun CoordinateCard(
 }
 
 @Composable
-private fun VerificationBanner(
-    isWithinRange: Boolean,
-    onUpdateLocation: () -> Unit,
-) {
+private fun VerificationBanner(isWithinRange: Boolean) {
     val accent = if (isWithinRange) HemSuccess else HemError
+    val uriHandler = LocalUriHandler.current
     Row(
         modifier =
             Modifier
@@ -308,7 +309,7 @@ private fun VerificationBanner(
                         color = HemPrimary,
                         fontWeight = FontWeight.Bold,
                         textDecoration = TextDecoration.Underline,
-                        modifier = Modifier.clickable(onClick = onUpdateLocation),
+                        modifier = Modifier.clickable { uriHandler.openUri(NHPR_URL) },
                     )
                 }
             }

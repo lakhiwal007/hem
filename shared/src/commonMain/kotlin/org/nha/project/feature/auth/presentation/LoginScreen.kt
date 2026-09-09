@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -34,26 +33,28 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -65,10 +66,13 @@ import hem.shared.generated.resources.Res
 import hem.shared.generated.resources.nha_logo
 import hem.shared.generated.resources.onboarding_screen_background
 import hem.shared.generated.resources.pmjay_logo
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.nha.project.core.ui.components.Base64Image
 import org.nha.project.core.ui.components.LoadingOverlay
+import org.nha.project.core.ui.components.OtpInputFields
+import org.nha.project.core.ui.theme.HemError
 import org.nha.project.core.ui.theme.HemFocusBorder
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
@@ -100,6 +104,13 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         onVerifyUserId = viewModel::verifyUserId,
         onSubmitLogin = viewModel::submitLogin,
     )
+
+    if (state.showAlreadyLoggedInSheet) {
+        AlreadyLoggedInSheet(
+            onLogoutAllSessions = viewModel::logoutAllSessionsAndRetry,
+            onDismiss = viewModel::dismissAlreadyLoggedInSheet,
+        )
+    }
 }
 
 @Composable
@@ -212,7 +223,7 @@ private fun LoginContent(
                 if (isPasswordMode) {
                     PasswordInput(value = state.otpInput, onValueChange = onOtpChange)
                 } else {
-                    OtpInput(value = state.otpInput, onValueChange = onOtpChange)
+                    OtpInputFields(value = state.otpInput, onValueChange = onOtpChange)
                 }
 
                 if (!state.initMessage.isNullOrBlank()) {
@@ -269,6 +280,58 @@ private fun LoginContent(
                     Text("LOG IN »", color = Color.White)
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AlreadyLoggedInSheet(
+    onLogoutAllSessions: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+
+    fun dismissThen(action: () -> Unit) {
+        scope.launch { sheetState.hide() }.invokeOnCompletion { action() }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = { dismissThen(onDismiss) },
+        sheetState = sheetState,
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+            Text(
+                text = "Already logged in",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text =
+                    "You have an active session in the application. Do you want to logout the currently logged-in session and re-login with a new session?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { dismissThen(onDismiss) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Cancel")
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Button(
+                    onClick = { dismissThen(onLogoutAllSessions) },
+                    colors = ButtonDefaults.buttonColors(containerColor = HemError),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("Logout")
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -408,38 +471,6 @@ private fun PasswordInput(
                 focusedBorderColor = HemFocusBorder,
             ),
     )
-}
-
-@Composable
-private fun OtpInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    length: Int = 6,
-) {
-    Box(contentAlignment = Alignment.CenterStart) {
-        BasicTextField(
-            value = value,
-            onValueChange = { new -> if (new.length <= length && new.all(Char::isDigit)) onValueChange(new) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-            textStyle = TextStyle(color = Color.Transparent),
-            cursorBrush = SolidColor(Color.Transparent),
-            modifier = Modifier.fillMaxWidth().height(44.dp),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(length) { index ->
-                val char = value.getOrNull(index)?.toString() ?: ""
-                Box(
-                    modifier =
-                        Modifier
-                            .size(44.dp)
-                            .background(Color.White, RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(text = char, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
 }
 
 @Preview
