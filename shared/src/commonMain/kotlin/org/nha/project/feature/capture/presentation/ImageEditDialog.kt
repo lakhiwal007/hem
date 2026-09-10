@@ -62,11 +62,6 @@ private enum class DragHandle {
     RIGHT,
 }
 
-/**
- * Full-screen crop/rotate editor shown right after a photo is captured and before it's stamped
- * with metadata and uploaded. [onConfirm] receives the edited (or unedited, if untouched)
- * base64 JPEG; [onCancel] discards the edit entirely (the photo is not uploaded).
- */
 @Composable
 fun ImageEditDialog(
     base64: String,
@@ -245,13 +240,6 @@ private fun CropOverlay(
     val minCropSizePx = with(density) { 64.dp.toPx() }
     val barLengthPx = with(density) { 48.dp.toPx() }
     val barThicknessPx = with(density) { 8.dp.toPx() }
-    // detectDragGestures runs inside this pointerInput block, which is only ever restarted when
-    // imageSize changes (i.e. after a rotate) - a plain closure over the cropRect parameter would
-    // go stale after the first recomposition and keep computing deltas against the original rect,
-    // which is what caused the crop box to jitter/snap back while dragging. rememberUpdatedState
-    // keeps a live reference the gesture can read at each drag start, and accumulating the drag
-    // locally (dragStartRect + total offset since press) makes each frame's move self-consistent
-    // instead of depending on the (possibly stale) rect from the previous frame.
     val latestCropRect = rememberUpdatedState(cropRect)
     var dragHandle by remember { mutableStateOf<DragHandle?>(null) }
 
@@ -295,8 +283,6 @@ private fun CropOverlay(
         val midY = (cropRect.top + cropRect.bottom) / 2f
         val cornerRadius = CornerRadius(barThicknessPx / 2)
 
-        // Top/bottom handles resize height only; left/right handles resize width only - easier
-        // to grab and predict than a single diagonal corner drag.
         listOf(cropRect.top, cropRect.bottom).forEach { y ->
             drawRoundRect(
                 color = Color.White,

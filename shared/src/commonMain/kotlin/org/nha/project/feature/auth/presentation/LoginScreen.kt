@@ -86,8 +86,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         viewModel.loginSuccessEvents.collect { onLoginSuccess() }
     }
 
-    // The Login screen's ViewModel can be reused across a logout (the nav backstack entry for
-    // this route never truly leaves), so force a clean form + fresh captcha on every entry.
     LaunchedEffect(Unit) {
         viewModel.retryCaptcha1()
     }

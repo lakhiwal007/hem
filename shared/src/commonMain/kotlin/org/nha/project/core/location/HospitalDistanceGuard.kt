@@ -22,8 +22,6 @@ import org.nha.project.core.ui.components.HospitalOutOfRangeSheet
 
 private const val DISTANCE_POLL_INTERVAL_MS = 5_000L
 
-// HospitalLocationVerification is deliberately excluded - it already shows its own in-page
-// mismatch banner and retry/cancel controls, so the bottom-drawer warning here would be redundant.
 private fun Route?.isWithinHospitalFlow(): Boolean =
     this is Route.HospitalSpecialities ||
         this is Route.HospitalServices ||

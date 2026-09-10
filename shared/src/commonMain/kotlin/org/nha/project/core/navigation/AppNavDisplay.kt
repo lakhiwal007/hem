@@ -156,10 +156,6 @@ fun AppNavDisplay() {
                                     hospital = route.hospital,
                                     onCancel = { backStack.removeLastOrNull() },
                                     onContinue = {
-                                        // Replace this entry rather than pushing on top of it - it's an
-                                        // auto-skipping gate, not a real page, so it must not linger in
-                                        // the backstack where a Back press would land on it and instantly
-                                        // bounce forward again.
                                         backStack.removeLastOrNull()
                                         backStack.add(
                                             if (isPhysicalVerifier) {

@@ -13,12 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
-/**
- * Dims [content] and shows a centered spinner on top of it while [isLoading] is true, blocking
- * touches from reaching the content underneath instead of hiding it - so the screen keeps showing
- * whatever it already had (e.g. previous coordinates, a filled-in form) rather than flashing to
- * empty during a refresh.
- */
 @Composable
 fun LoadingOverlay(
     isLoading: Boolean,

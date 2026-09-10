@@ -102,11 +102,6 @@ fun BrandedHeader(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
             }
-//            Image(
-//                painter = painterResource(Res.drawable.nha_logo),
-//                contentDescription = "National Health Authority",
-//                modifier = Modifier.height(32.dp),
-//            )
         }
         Image(
             painter = painterResource(Res.drawable.pmjay_logo),

@@ -89,7 +89,6 @@ fun List<ServiceDto>.toServices(
         val id = dto.serviceId ?: return@mapNotNull null
         val showCheckmark =
             if (isPhysicalVerifier) {
-                // "PENDING" means not yet verified - only a decided status (approved/rejected) checks off.
                 !dto.verificationStatus.isNullOrBlank() && !dto.verificationStatus.equals("PENDING", ignoreCase = true)
             } else {
                 dto.submissionStatus.equals("SUBMITTED", ignoreCase = true)

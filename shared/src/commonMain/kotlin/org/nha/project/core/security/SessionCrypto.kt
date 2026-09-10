@@ -7,10 +7,6 @@ import dev.whyoleg.cryptography.algorithms.SHA256
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
-/**
- * Matches the government API's IDAM_KEY2 scheme: SHA-256(passphrase) as a raw AES-256/ECB key.
- * ECB mode is what the server expects here (no IV involved) - not a scheme we chose ourselves.
- */
 @OptIn(ExperimentalEncodingApi::class, DelicateCryptographyApi::class)
 object SessionCrypto {
     private val provider = CryptographyProvider.Default

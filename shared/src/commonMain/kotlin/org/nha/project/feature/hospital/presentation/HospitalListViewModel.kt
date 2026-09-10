@@ -69,7 +69,6 @@ class HospitalListViewModel(
             val session = sessionStorage.session.first()
             sessionStorage.clear()
             onLoggedOut()
-            // Best-effort audit call — must not block navigation if it's slow or fails.
             if (session != null) {
                 authApi.storeLoginLogoutDetails(session, "Logout")
             }

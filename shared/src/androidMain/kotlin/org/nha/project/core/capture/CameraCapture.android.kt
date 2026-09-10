@@ -26,7 +26,6 @@ private fun Bitmap.scaledDownIfNeeded(maxDimensionPx: Int): Bitmap {
     return Bitmap.createScaledBitmap(this, newWidth, newHeight, true)
 }
 
-/** Compresses to JPEG, stepping quality down until the result fits under [maxBytes]. */
 internal fun Bitmap.compressUnder(maxBytes: Int): ByteArray {
     var quality = 85
     var bytes: ByteArray
@@ -39,15 +38,6 @@ internal fun Bitmap.compressUnder(maxBytes: Int): ByteArray {
     return bytes
 }
 
-/**
- * Reads the file at [path], rotates its pixels to match its own EXIF orientation tag (so the
- * result carries no reliance on decoders elsewhere honoring EXIF), downscales it if it's larger
- * than needed for a verification photo, and compresses it under [MAX_CAPTURED_IMAGE_BYTES],
- * returning base64 JPEG. Deliberately file-based (not TakePicturePreview's in-memory Bitmap)
- * because only a real file written by the camera app carries EXIF orientation - the preview
- * Bitmap has none, which is why photos captured that way can come back sideways with no way to
- * correct them.
- */
 private fun orientedBase64Jpeg(path: String): String? {
     val bitmap = BitmapFactory.decodeFile(path) ?: return null
     val orientation =

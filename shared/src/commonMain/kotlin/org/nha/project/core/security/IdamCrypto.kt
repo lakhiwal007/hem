@@ -14,11 +14,6 @@ private const val KEY_SIZE_BYTES = 32
 private const val IV_SIZE_BYTES = 16
 private const val ITERATION_COUNT = 1989
 
-/**
- * Matches the government API's IDAM_KEY scheme: PBKDF2WithHmacSHA1-derived AES-256/CBC,
- * output formatted as saltHex(64) + ivHex(32) + base64(ciphertext) - mirrors the CryptoJS
- * format the server expects, not a scheme we chose ourselves.
- */
 @OptIn(ExperimentalEncodingApi::class, DelicateCryptographyApi::class)
 object IdamCrypto {
     private val provider = CryptographyProvider.Default

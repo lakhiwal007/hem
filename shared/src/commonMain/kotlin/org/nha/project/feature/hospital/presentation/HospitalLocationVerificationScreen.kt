@@ -66,8 +66,6 @@ fun HospitalLocationVerificationScreen(
     val viewModel = koinViewModel<HospitalLocationVerificationViewModel> { parametersOf(hospital) }
     val state by viewModel.uiState.collectAsState()
 
-    // Skip this screen entirely when already within range - only show it to surface an
-    // out-of-range mismatch that needs the user's attention.
     LaunchedEffect(state.distanceMeters) {
         if (state.isWithinRange) onContinue()
     }

@@ -38,16 +38,6 @@ import org.nha.project.core.ui.theme.HemPrimary
 
 private val OTP_BOX_SPACING = 8.dp
 
-/**
- * A boxed, one-digit-per-cell OTP entry field. Each box is a real, independently focusable
- * text field (not one hidden field behind drawn boxes), so tapping a box focuses exactly that
- * box via the platform's own tap-to-focus - no synthetic touch-area sizing needed. Typing a
- * digit auto-advances to the next box; Backspace on an already-empty box moves back and clears
- * the previous one. Each box selects its whole contents on focus, so retyping over a filled box
- * replaces it instead of appending - which also cleanly disambiguates a genuine multi-digit paste
- * or SMS autofill (which replaces the selection with the whole code at once) from a normal single
- * keystroke, so OTP autofill still works landing on any box.
- */
 @Composable
 fun OtpInputFields(
     value: String,
@@ -91,12 +81,6 @@ fun OtpInputFields(
     }
 }
 
-/**
- * Applies [digits] typed/pasted into the box at [index] to the full OTP [value]. A single digit
- * replaces whatever was at that position (the box selects-all on focus, so a keystroke always
- * arrives as exactly one replacement digit); more than one digit means a paste/autofill landed
- * here, so it's spread starting at this position as the new tail of the code.
- */
 private fun applyBoxInput(
     value: String,
     index: Int,
@@ -132,7 +116,6 @@ private fun OtpDigitField(
         onValueChange = { new ->
             val digits = new.text.filter(Char::isDigit)
             if (digits == digit?.toString().orEmpty()) {
-                // Selection/cursor move only, no actual digit change - just track it locally.
                 fieldValue = new
             } else {
                 onDigitsEntered(digits)

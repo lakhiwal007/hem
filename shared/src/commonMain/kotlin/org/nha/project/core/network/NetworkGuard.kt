@@ -18,8 +18,6 @@ import org.koin.compose.koinInject
 import org.nha.project.core.navigation.Route
 import org.nha.project.core.ui.components.NoNetworkSheet
 
-// Splash is just a branded loading screen with an auto-timeout and no user action available,
-// so there's nothing useful to block there.
 private val ROUTES_WITHOUT_NETWORK_GUARD = setOf(Route.Splash)
 
 @Composable

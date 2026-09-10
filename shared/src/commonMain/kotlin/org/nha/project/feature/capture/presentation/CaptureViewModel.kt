@@ -69,7 +69,6 @@ class CaptureViewModel(
                     _uiState.update { state -> state.copy(images = images, isLoading = false) }
                 }
                 is ApiResult.Error -> {
-                    // No prior submission for this service yet - starting fresh is expected, not an error.
                     _uiState.update { it.copy(isLoading = false) }
                 }
             }
