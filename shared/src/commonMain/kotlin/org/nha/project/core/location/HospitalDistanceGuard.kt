@@ -25,9 +25,7 @@ private const val DISTANCE_POLL_INTERVAL_MS = 5_000L
 private fun Route?.isWithinHospitalFlow(): Boolean =
     this is Route.HospitalSpecialities ||
         this is Route.HospitalServices ||
-        this is Route.Capture ||
-        this is Route.HospitalOtpVerification ||
-        this is Route.PhysicalVerifyImages
+        this is Route.HospitalOtpVerification
 
 @Composable
 fun HospitalDistanceGuard(

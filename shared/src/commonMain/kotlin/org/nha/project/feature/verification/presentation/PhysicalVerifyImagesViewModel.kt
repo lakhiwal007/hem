@@ -42,13 +42,16 @@ class PhysicalVerifyImagesViewModel(
     private val speciality: Speciality,
     private val service: Service,
 ) : ViewModel() {
+    private val decidedAction = actionFor(service.verificationStatus)
+    private val isReadOnly = isDecided(service.verificationStatus)
+
     private val _uiState =
         MutableStateFlow(
             PhysicalVerifyImagesUiState(
                 serviceName = service.name,
-                comments = service.verifierComments.orEmpty(),
-                action = actionFor(service.verificationStatus),
-                isReadOnly = isDecided(service.verificationStatus),
+                isReadOnly = isReadOnly,
+                decidedAction = decidedAction,
+                decidedComments = service.verifierComments.takeIf { isReadOnly },
             ),
         )
     val uiState: StateFlow<PhysicalVerifyImagesUiState> = _uiState.asStateFlow()
@@ -71,9 +74,13 @@ class PhysicalVerifyImagesViewModel(
                 is ApiResult.Success -> {
                     val images =
                         result.data.mapIndexed { index, image ->
-                            UploadedImage(
-                                label = image.fileName ?: "Image ${index + 1}",
-                                base64 = image.base64Image,
+                            ImageVerification(
+                                image =
+                                    UploadedImage(
+                                        label = image.fileName ?: "Image ${index + 1}",
+                                        base64 = image.base64Image,
+                                    ),
+                                action = decidedAction,
                             )
                         }
                     val submissionId = result.data.firstNotNullOfOrNull { it.submissionId }
@@ -87,22 +94,51 @@ class PhysicalVerifyImagesViewModel(
         }
     }
 
-    fun updateComments(value: String) {
+    fun updateImageAction(
+        index: Int,
+        action: VerificationAction,
+    ) {
         if (_uiState.value.isReadOnly) return
-        _uiState.update { it.copy(comments = value) }
+        _uiState.update { state ->
+            state.copy(
+                images =
+                    state.images.mapIndexed { i, item ->
+                        if (i == index) item.copy(action = action) else item
+                    },
+            )
+        }
     }
 
-    fun updateAction(value: VerificationAction) {
+    fun updateImageComment(
+        index: Int,
+        comment: String,
+    ) {
         if (_uiState.value.isReadOnly) return
-        _uiState.update { it.copy(action = value) }
+        _uiState.update { state ->
+            state.copy(
+                images =
+                    state.images.mapIndexed { i, item ->
+                        if (i == index) item.copy(comment = comment) else item
+                    },
+            )
+        }
     }
 
     fun submit() {
         val state = _uiState.value
-        if (state.isReadOnly) return
+        if (!state.canSubmit) return
         val submissionId = state.submissionId ?: return
-        val action = state.action ?: return
-        if (state.comments.isBlank()) return
+        val overallStatus =
+            if (state.images.any { it.action == VerificationAction.NOT_RECOMMENDED }) {
+                VERIFICATION_STATUS_REJECTED
+            } else {
+                VERIFICATION_STATUS_APPROVED
+            }
+        val combinedComments =
+            state.images
+                .mapIndexedNotNull { index, item ->
+                    item.comment.takeIf { it.isNotBlank() }?.let { "Image ${index + 1}: $it" }
+                }.joinToString("\n")
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
             val session = sessionStorage.session.first()
@@ -112,13 +148,8 @@ class PhysicalVerifyImagesViewModel(
                     hospId = hospital.hospitalId,
                     specialityId = speciality.id,
                     serviceId = service.id,
-                    verificationStatus =
-                        if (action == VerificationAction.RECOMMENDED) {
-                            VERIFICATION_STATUS_APPROVED
-                        } else {
-                            VERIFICATION_STATUS_REJECTED
-                        },
-                    comments = state.comments,
+                    verificationStatus = overallStatus,
+                    comments = combinedComments,
                     verifiedBy = session?.userId.orEmpty(),
                 )
             when (result) {

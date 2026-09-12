@@ -1,5 +1,7 @@
 package org.nha.project.feature.hospital.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,16 +47,17 @@ import org.koin.core.parameter.parametersOf
 import org.nha.project.core.ui.components.BrandedHeader
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemTheme
+import org.nha.project.feature.capture.presentation.CaptureAccordionContent
 import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.Service
 import org.nha.project.feature.hospital.domain.Speciality
+import org.nha.project.feature.verification.presentation.VerifyAccordionContent
 
 @Composable
 fun HospitalServicesScreen(
     hospital: Hospital,
     speciality: Speciality,
     onBack: () -> Unit,
-    onServiceClick: (Service) -> Unit,
 ) {
     val viewModel = koinViewModel<HospitalServicesViewModel> { parametersOf(hospital, speciality) }
     val state by viewModel.uiState.collectAsState()
@@ -63,21 +67,25 @@ fun HospitalServicesScreen(
     }
 
     HospitalServicesContent(
-        specialityName = speciality.description,
+        hospital = hospital,
+        speciality = speciality,
         state = state,
         onBack = onBack,
         onRefresh = viewModel::loadServices,
-        onServiceClick = onServiceClick,
+        onServiceClick = { service -> viewModel.toggleExpanded(service.id) },
+        onSubmitted = viewModel::loadServices,
     )
 }
 
 @Composable
 private fun HospitalServicesContent(
-    specialityName: String,
+    hospital: Hospital,
+    speciality: Speciality,
     state: HospitalServicesUiState,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onServiceClick: (Service) -> Unit,
+    onSubmitted: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         BrandedHeader(onBack = onBack)
@@ -109,7 +117,7 @@ private fun HospitalServicesContent(
                         .padding(top = 20.dp, bottom = 24.dp),
             ) {
                 Text(
-                    text = specialityName,
+                    text = speciality.description,
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.DarkGray,
                     textAlign = TextAlign.Center,
@@ -118,7 +126,15 @@ private fun HospitalServicesContent(
                 Spacer(modifier = Modifier.height(20.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     state.services.forEach { service ->
-                        ServiceCard(service = service, onClick = { onServiceClick(service) })
+                        ServiceAccordionItem(
+                            hospital = hospital,
+                            speciality = speciality,
+                            service = service,
+                            expanded = state.expandedServiceId == service.id,
+                            isPhysicalVerifier = state.isPhysicalVerifier,
+                            onClick = { onServiceClick(service) },
+                            onSubmitted = onSubmitted,
+                        )
                     }
                 }
             }
@@ -127,19 +143,22 @@ private fun HospitalServicesContent(
 }
 
 @Composable
-private fun ServiceCard(
+private fun ServiceAccordionItem(
+    hospital: Hospital,
+    speciality: Speciality,
     service: Service,
+    expanded: Boolean,
+    isPhysicalVerifier: Boolean,
     onClick: () -> Unit,
+    onSubmitted: () -> Unit,
 ) {
-    val backgroundColor = if (service.showCheckmark) Color(0xFFF0F0F0) else MaterialTheme.colorScheme.surface
-    Row(
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp))
-                .background(backgroundColor)
                 .let {
-                    if (service.showCheckmark) {
+                    if (expanded) {
                         it
                     } else {
                         it.border(
@@ -148,29 +167,63 @@ private fun ServiceCard(
                             shape = RoundedCornerShape(10.dp),
                         )
                     }
-                }.clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                }.background(if (service.showCheckmark) Color(0xFFF0F0F0) else MaterialTheme.colorScheme.surface),
     ) {
-        Text(
-            text = service.name,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.DarkGray,
-            modifier = Modifier.weight(1f),
-        )
-        if (service.showCheckmark) {
-            Image(
-                painter = painterResource(Res.drawable.success),
-                contentDescription = "Images uploaded",
-                modifier = Modifier.size(20.dp).clip(CircleShape),
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = service.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.DarkGray,
+                modifier = Modifier.weight(1f),
             )
-        } else {
+            if (service.showCheckmark) {
+                Image(
+                    painter = painterResource(Res.drawable.success),
+                    contentDescription = "Images uploaded",
+                    modifier = Modifier.size(20.dp).clip(CircleShape),
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+            }
+            val arrowRotation by animateFloatAsState(targetValue = if (expanded) 90f else 0f)
             Image(
                 painter = painterResource(Res.drawable.right_arrow),
                 contentDescription = null,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.size(16.dp).rotate(arrowRotation),
             )
+        }
+
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp),
+            ) {
+                if (isPhysicalVerifier) {
+                    VerifyAccordionContent(
+                        hospital = hospital,
+                        speciality = speciality,
+                        service = service,
+                        onSubmitted = onSubmitted,
+                    )
+                } else {
+                    CaptureAccordionContent(
+                        hospital = hospital,
+                        speciality = speciality,
+                        service = service,
+                        onSubmitted = onSubmitted,
+                    )
+                }
+            }
         }
     }
 }
@@ -180,7 +233,17 @@ private fun ServiceCard(
 private fun HospitalServicesScreenPreview() {
     HemTheme {
         HospitalServicesContent(
-            specialityName = "CTVS",
+            hospital =
+                Hospital(
+                    name = "Shree Ganga Ram Hospital",
+                    description = "",
+                    phone = "",
+                    status = org.nha.project.feature.hospital.domain.HospitalStatus.EMPANELLED,
+                    hfrLocation =
+                        org.nha.project.core.location
+                            .GeoPoint(28.6139, 77.2090),
+                ),
+            speciality = Speciality(id = 1L, code = "CTVS", description = "CTVS"),
             state =
                 HospitalServicesUiState(
                     services =
@@ -194,6 +257,7 @@ private fun HospitalServicesScreenPreview() {
             onBack = {},
             onRefresh = {},
             onServiceClick = {},
+            onSubmitted = {},
         )
     }
 }

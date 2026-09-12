@@ -26,7 +26,6 @@ import org.nha.project.feature.auth.data.AuthApi
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.auth.domain.isPhysicalVerifier
 import org.nha.project.feature.auth.presentation.LoginScreen
-import org.nha.project.feature.capture.presentation.CaptureScreen
 import org.nha.project.feature.hospital.presentation.HospitalListScreen
 import org.nha.project.feature.hospital.presentation.HospitalLocationVerificationScreen
 import org.nha.project.feature.hospital.presentation.HospitalServicesScreen
@@ -35,7 +34,6 @@ import org.nha.project.feature.hospital.presentation.HospitalStatusScreen
 import org.nha.project.feature.permission.presentation.LocationPermissionScreen
 import org.nha.project.feature.splash.presentation.SplashScreen
 import org.nha.project.feature.verification.presentation.HospitalOtpVerificationScreen
-import org.nha.project.feature.verification.presentation.PhysicalVerifyImagesScreen
 
 private val routeSavedStateConfig =
     SavedStateConfiguration {
@@ -58,14 +56,9 @@ private val routeSavedStateConfig =
                         Route.HospitalServices::class,
                         Route.HospitalServices.serializer(),
                     )
-                    subclass(Route.Capture::class, Route.Capture.serializer())
                     subclass(
                         Route.HospitalOtpVerification::class,
                         Route.HospitalOtpVerification.serializer(),
-                    )
-                    subclass(
-                        Route.PhysicalVerifyImages::class,
-                        Route.PhysicalVerifyImages.serializer(),
                     )
                     subclass(Route.Status::class, Route.Status.serializer())
                 }
@@ -187,33 +180,6 @@ fun AppNavDisplay() {
                                     hospital = route.hospital,
                                     speciality = route.speciality,
                                     onBack = { backStack.removeLastOrNull() },
-                                    onServiceClick = { service ->
-                                        backStack.add(
-                                            if (isPhysicalVerifier) {
-                                                Route.PhysicalVerifyImages(route.hospital, route.speciality, service)
-                                            } else {
-                                                Route.Capture(route.hospital, route.speciality, service)
-                                            },
-                                        )
-                                    },
-                                )
-                            }
-                            entry<Route.Capture> { route ->
-                                CaptureScreen(
-                                    hospital = route.hospital,
-                                    speciality = route.speciality,
-                                    service = route.service,
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onSubmit = { backStack.removeLastOrNull() },
-                                )
-                            }
-                            entry<Route.PhysicalVerifyImages> { route ->
-                                PhysicalVerifyImagesScreen(
-                                    hospital = route.hospital,
-                                    speciality = route.speciality,
-                                    service = route.service,
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onSubmitted = { backStack.removeLastOrNull() },
                                 )
                             }
                             entry<Route.Status> {

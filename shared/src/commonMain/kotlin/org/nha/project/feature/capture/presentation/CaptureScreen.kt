@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -54,9 +53,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import org.nha.project.core.capture.rememberCameraCapture
-import org.nha.project.core.location.GeoPoint
 import org.nha.project.core.ui.components.Base64Image
-import org.nha.project.core.ui.components.BrandedHeader
 import org.nha.project.core.ui.components.LoadingOverlay
 import org.nha.project.core.ui.theme.HemPrimary
 import org.nha.project.core.ui.theme.HemSuccess
@@ -66,7 +63,6 @@ import org.nha.project.feature.capture.domain.CapturedImage
 import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.Service
 import org.nha.project.feature.hospital.domain.Speciality
-import kotlin.math.round
 
 private val GUIDELINES =
     listOf(
@@ -77,18 +73,20 @@ private val GUIDELINES =
     )
 
 @Composable
-fun CaptureScreen(
+fun CaptureAccordionContent(
     hospital: Hospital,
     speciality: Speciality,
     service: Service,
-    onBack: () -> Unit,
-    onSubmit: () -> Unit,
+    onSubmitted: () -> Unit,
 ) {
-    val viewModel = koinViewModel<CaptureViewModel> { parametersOf(hospital, speciality, service) }
+    val viewModel =
+        koinViewModel<CaptureViewModel>(key = "capture-${service.id}") {
+            parametersOf(hospital, speciality, service)
+        }
     val state by viewModel.uiState.collectAsState()
 
     LaunchedEffect(state.submitted) {
-        if (state.submitted) onSubmit()
+        if (state.submitted) onSubmitted()
     }
 
     var pendingRetakeIndex by remember { mutableStateOf<Int?>(null) }
@@ -105,7 +103,6 @@ fun CaptureScreen(
 
     CaptureContent(
         state = state,
-        onBack = onBack,
         onCapture = {
             pendingRetakeIndex = null
             captureImage()
@@ -145,7 +142,6 @@ private data class PendingEditImage(
 @Composable
 private fun CaptureContent(
     state: CaptureUiState,
-    onBack: () -> Unit,
     onCapture: () -> Unit,
     onRetake: (Int) -> Unit,
     onZoom: (CapturedImage) -> Unit,
@@ -153,91 +149,89 @@ private fun CaptureContent(
 ) {
     LoadingOverlay(
         isLoading = state.isLoading || state.isSubmitting,
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            BrandedHeader(onBack = onBack)
+        Column {
+            Text(
+                text = "Upload clear images of ${state.serviceName} for verification.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+            )
 
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .offset(y = (-16).dp)
-                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                        .background(MaterialTheme.colorScheme.background)
-                        .padding(horizontal = 20.dp)
-                        .padding(top = 20.dp, bottom = 24.dp),
-            ) {
+            Spacer(modifier = Modifier.height(16.dp))
+            GuidelinesCard()
+
+            if (state.images.isEmpty()) {
+                Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Upload Images",
+                    text = "Capture Image",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = HemPrimary,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+                CaptureDropZone(onClick = onCapture)
+            } else {
+                Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = state.serviceName,
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "Uploaded Images (${state.images.size}/${state.maxImages})",
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.DarkGray,
+                    color = HemPrimary,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Upload clear images of ${state.serviceName} for verification.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRowImages(
+                    images = state.images,
+                    canAddMore = state.canAddMore,
+                    onRetake = onRetake,
+                    onZoom = onZoom,
+                    onCapture = onCapture,
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                UploadProgressStatus(state = state)
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                GuidelinesCard()
+            Spacer(modifier = Modifier.height(16.dp))
+            NoteCard()
 
-                if (state.images.isEmpty()) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Text(
-                        text = "Capture Image",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = HemPrimary,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    CaptureDropZone(onClick = onCapture)
-                } else {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Text(
-                        text = "Uploaded Images (${state.images.size}/${state.maxImages})",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = HemPrimary,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        state.images.forEachIndexed { index, image ->
-                            CapturedThumbnail(
-                                image = image,
-                                onRetake = { onRetake(index) },
-                                onZoom = { onZoom(image) },
-                            )
-                        }
-                        if (state.canAddMore) {
-                            AddMoreTile(onClick = onCapture)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    UploadProgressStatus(state = state)
+            if (state.canSubmit) {
+                Spacer(modifier = Modifier.height(20.dp))
+                Button(
+                    onClick = onSubmit,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = HemPrimary),
+                ) {
+                    Text("SUBMIT", fontWeight = FontWeight.Bold)
                 }
+            }
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.height(16.dp))
-                NoteCard()
-
-                if (state.canSubmit) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = onSubmit,
-                        modifier = Modifier.fillMaxWidth().height(52.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = HemPrimary),
-                    ) {
-                        Text("SUBMIT", fontWeight = FontWeight.Bold)
+@Composable
+private fun FlowRowImages(
+    images: List<CapturedImage>,
+    canAddMore: Boolean,
+    onRetake: (Int) -> Unit,
+    onZoom: (CapturedImage) -> Unit,
+    onCapture: () -> Unit,
+) {
+    val itemsPerRow = 3
+    val rows = (images.size + (if (canAddMore) 1 else 0) + itemsPerRow - 1) / itemsPerRow
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        repeat(rows) { rowIndex ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                for (column in 0 until itemsPerRow) {
+                    val index = rowIndex * itemsPerRow + column
+                    when {
+                        index < images.size ->
+                            CapturedThumbnail(
+                                image = images[index],
+                                onRetake = { onRetake(index) },
+                                onZoom = { onZoom(images[index]) },
+                            )
+                        index == images.size && canAddMore -> AddMoreTile(onClick = onCapture)
                     }
                 }
             }
@@ -505,12 +499,6 @@ private fun ImageMetadataOverlay(
     }
 }
 
-private fun formatLiveLocation(point: GeoPoint): String {
-    val lat = round(point.latitude * 10000) / 10000
-    val long = round(point.longitude * 10000) / 10000
-    return "$lat°N, $long°E"
-}
-
 private fun Modifier.dashedBorder(
     color: Color,
     cornerRadius: Dp,
@@ -537,11 +525,10 @@ private fun Modifier.dashedBorder(
 
 @Preview
 @Composable
-private fun CaptureScreenPreview() {
+private fun CaptureContentPreview() {
     HemTheme {
         CaptureContent(
             state = CaptureUiState(serviceName = "Blood Gas And Electrolyte Analysers"),
-            onBack = {},
             onCapture = {},
             onRetake = {},
             onZoom = {},

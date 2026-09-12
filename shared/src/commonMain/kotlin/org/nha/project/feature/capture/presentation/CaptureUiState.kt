@@ -5,7 +5,7 @@ import org.nha.project.feature.capture.domain.CapturedImage
 data class CaptureUiState(
     val serviceName: String,
     val images: List<CapturedImage> = emptyList(),
-    val maxImages: Int = 3,
+    val maxImages: Int = 10,
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
     val finalSubmitAllowed: Boolean = true,

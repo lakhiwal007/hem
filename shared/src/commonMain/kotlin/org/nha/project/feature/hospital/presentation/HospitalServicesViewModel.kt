@@ -34,13 +34,21 @@ class HospitalServicesViewModel(
             when (val result = hospitalApi.getServices(hospId = hospital.hospitalId, specialityId = speciality.id)) {
                 is ApiResult.Success -> {
                     val services = result.data.toServices(speciality.id, isPhysicalVerifier)
-                    _uiState.update { it.copy(isLoading = false, services = services) }
+                    _uiState.update {
+                        it.copy(isLoading = false, services = services, isPhysicalVerifier = isPhysicalVerifier)
+                    }
                 }
                 is ApiResult.Error -> {
                     _uiState.update { it.copy(isLoading = false) }
                     toastController.error("Could not load services. Please try again.")
                 }
             }
+        }
+    }
+
+    fun toggleExpanded(serviceId: Long) {
+        _uiState.update {
+            it.copy(expandedServiceId = if (it.expandedServiceId == serviceId) null else serviceId)
         }
     }
 }
