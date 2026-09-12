@@ -156,7 +156,6 @@ fun AppNavDisplay() {
                                     hospital = route.hospital,
                                     onCancel = { backStack.removeLastOrNull() },
                                     onContinue = {
-                                        backStack.removeLastOrNull()
                                         backStack.add(
                                             if (isPhysicalVerifier) {
                                                 Route.HospitalOtpVerification(route.hospital)

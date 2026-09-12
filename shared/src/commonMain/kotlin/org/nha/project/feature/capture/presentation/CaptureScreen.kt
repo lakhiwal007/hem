@@ -353,7 +353,7 @@ private fun CapturedThumbnail(
                 Modifier
                     .align(Alignment.TopEnd)
                     .padding(4.dp)
-                    .size(20.dp)
+                    .size(28.dp)
                     .clickable(onClick = onRetake),
         )
         if (base64 != null) {
@@ -363,8 +363,8 @@ private fun CapturedThumbnail(
                 modifier =
                     Modifier
                         .align(Alignment.BottomStart)
-                        .padding(4.dp)
-                        .size(20.dp)
+                        .padding(6.dp)
+                        .size(32.dp)
                         .clickable(onClick = onZoom),
             )
         }
