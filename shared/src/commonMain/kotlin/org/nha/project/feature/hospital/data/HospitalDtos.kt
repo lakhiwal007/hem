@@ -26,6 +26,8 @@ data class HospitalDto(
     val hospLongitude: String? = null,
     val statusFlag: String? = null,
     val schemeCode: String? = null,
+    val stateCode: Int? = null,
+    val districtCode: Int? = null,
 )
 
 @Serializable
@@ -67,6 +69,8 @@ private fun HospitalDto.toDomain(groupStatusFlag: String?): Hospital? {
         hfrLocation = GeoPoint(latitude = latitude, longitude = longitude),
         hfrId = hfrId.orEmpty(),
         schemeCode = schemeCode ?: "PMJAY",
+        stateCode = stateCode?.toString(),
+        districtCode = districtCode?.toString(),
     )
 }
 

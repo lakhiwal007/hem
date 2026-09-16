@@ -10,6 +10,8 @@ data class HospitalOtpVerificationUiState(
     val isSendingOtp: Boolean = false,
     val isSubmitting: Boolean = false,
     val result: OtpVerificationResult? = null,
+    val resendSecondsRemaining: Int = 0,
 ) {
     val canSubmit: Boolean get() = otp.length == OTP_LENGTH && !isSubmitting && transactionId != null
+    val canResend: Boolean get() = resendSecondsRemaining <= 0 && !isSendingOtp
 }

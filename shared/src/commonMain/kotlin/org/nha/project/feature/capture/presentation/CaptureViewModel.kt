@@ -16,6 +16,7 @@ import org.nha.project.core.location.CurrentLocationProvider
 import org.nha.project.core.location.GeoPoint
 import org.nha.project.core.location.LocationResult
 import org.nha.project.core.network.ApiResult
+import org.nha.project.core.network.NetworkException
 import org.nha.project.core.ui.toast.ToastController
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.capture.data.CaptureApi
@@ -163,7 +164,7 @@ class CaptureViewModel(
                 }
                 is ApiResult.Error -> {
                     _uiState.update { it.copy(isSubmitting = false) }
-                    toastController.error("Could not submit images. Please try again.")
+                    toastController.error(errorMessage(result.exception, "Could not submit images. Please try again."))
                 }
             }
         }
@@ -190,6 +191,14 @@ class CaptureViewModel(
         when (result) {
             is ApiResult.Success -> {
                 val submission = result.data
+                val confirmed = submission.images.any { it.imageSlot == slot }
+                if (!confirmed) {
+                    _uiState.update { it.copy(isLoading = false) }
+                    toastController.error(
+                        "Upload was not confirmed by the server for this image. Please retake and try again.",
+                    )
+                    return
+                }
                 _uiState.update { state ->
                     val image = CapturedImage(base64 = base64, fileName = fileName, location = location)
                     val images =
@@ -209,10 +218,15 @@ class CaptureViewModel(
             }
             is ApiResult.Error -> {
                 _uiState.update { it.copy(isLoading = false) }
-                toastController.error("Could not upload image. Please try again.")
+                toastController.error(errorMessage(result.exception, "Could not upload image. Please try again."))
             }
         }
     }
+
+    private fun errorMessage(
+        exception: NetworkException,
+        fallback: String,
+    ): String = exception.message?.takeIf { it.isNotBlank() } ?: fallback
 
     private fun notifyUploadProgress(state: CaptureUiState) {
         val message =

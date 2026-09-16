@@ -15,22 +15,25 @@ import org.nha.project.feature.capture.data.CaptureApi
 import org.nha.project.feature.hospital.domain.Hospital
 import org.nha.project.feature.hospital.domain.Service
 import org.nha.project.feature.hospital.domain.Speciality
+import org.nha.project.feature.verification.data.ReviewDto
 import org.nha.project.feature.verification.data.UploadedImage
 import org.nha.project.feature.verification.data.VerificationAction
 import org.nha.project.feature.verification.data.VerifierApi
 
-private const val VERIFICATION_STATUS_APPROVED = "APPROVED"
-private const val VERIFICATION_STATUS_REJECTED = "REJECTED"
-private const val VERIFICATION_STATUS_PENDING = "PENDING"
+private const val VERIFICATION_STATUS_RECOMMEND = "RECOMMEND"
+private const val VERIFICATION_STATUS_NOT_RECOMMEND = "NOT_RECOMMEND"
 
-private fun isDecided(verificationStatus: String?): Boolean =
-    !verificationStatus.isNullOrBlank() && !verificationStatus.equals(VERIFICATION_STATUS_PENDING, ignoreCase = true)
-
-private fun actionFor(verificationStatus: String?): VerificationAction? =
+private fun actionFor(status: String?): VerificationAction? =
     when {
-        verificationStatus.equals(VERIFICATION_STATUS_APPROVED, ignoreCase = true) -> VerificationAction.RECOMMENDED
-        verificationStatus.equals(VERIFICATION_STATUS_REJECTED, ignoreCase = true) -> VerificationAction.NOT_RECOMMENDED
+        status.equals(VERIFICATION_STATUS_RECOMMEND, ignoreCase = true) -> VerificationAction.RECOMMENDED
+        status.equals(VERIFICATION_STATUS_NOT_RECOMMEND, ignoreCase = true) -> VerificationAction.NOT_RECOMMENDED
         else -> null
+    }
+
+private fun statusFor(action: VerificationAction): String =
+    when (action) {
+        VerificationAction.RECOMMENDED -> VERIFICATION_STATUS_RECOMMEND
+        VerificationAction.NOT_RECOMMENDED -> VERIFICATION_STATUS_NOT_RECOMMEND
     }
 
 class PhysicalVerifyImagesViewModel(
@@ -42,18 +45,7 @@ class PhysicalVerifyImagesViewModel(
     private val speciality: Speciality,
     private val service: Service,
 ) : ViewModel() {
-    private val decidedAction = actionFor(service.verificationStatus)
-    private val isReadOnly = isDecided(service.verificationStatus)
-
-    private val _uiState =
-        MutableStateFlow(
-            PhysicalVerifyImagesUiState(
-                serviceName = service.name,
-                isReadOnly = isReadOnly,
-                decidedAction = decidedAction,
-                decidedComments = service.verifierComments.takeIf { isReadOnly },
-            ),
-        )
+    private val _uiState = MutableStateFlow(PhysicalVerifyImagesUiState(serviceName = service.name))
     val uiState: StateFlow<PhysicalVerifyImagesUiState> = _uiState.asStateFlow()
 
     init {
@@ -72,18 +64,23 @@ class PhysicalVerifyImagesViewModel(
                     )
             ) {
                 is ApiResult.Success -> {
+                    val submissionId = result.data.firstNotNullOfOrNull { it.submissionId }
+                    val pvReviews = submissionId?.let { loadPvReviews(it) }.orEmpty()
                     val images =
                         result.data.mapIndexed { index, image ->
+                            val review = image.imageId?.let { pvReviews[it] }
                             ImageVerification(
                                 image =
                                     UploadedImage(
                                         label = image.fileName ?: "Image ${index + 1}",
                                         base64 = image.base64Image,
+                                        imageId = image.imageId,
                                     ),
-                                action = decidedAction,
+                                action = actionFor(review?.status),
+                                comment = review?.comments.orEmpty(),
+                                isReadOnly = review != null,
                             )
                         }
-                    val submissionId = result.data.firstNotNullOfOrNull { it.submissionId }
                     _uiState.update { it.copy(isLoading = false, images = images, submissionId = submissionId) }
                 }
                 is ApiResult.Error -> {
@@ -94,16 +91,25 @@ class PhysicalVerifyImagesViewModel(
         }
     }
 
+    private suspend fun loadPvReviews(submissionId: Long): Map<Long, ReviewDto> {
+        val result = verifierApi.getVerificationStatus(submissionId)
+        return (result as? ApiResult.Success)
+            ?.data
+            ?.images
+            .orEmpty()
+            .mapNotNull { image -> image.imageId?.let { id -> image.pvReview?.let { id to it } } }
+            .toMap()
+    }
+
     fun updateImageAction(
         index: Int,
         action: VerificationAction,
     ) {
-        if (_uiState.value.isReadOnly) return
         _uiState.update { state ->
             state.copy(
                 images =
                     state.images.mapIndexed { i, item ->
-                        if (i == index) item.copy(action = action) else item
+                        if (i == index && !item.isReadOnly) item.copy(action = action) else item
                     },
             )
         }
@@ -113,12 +119,11 @@ class PhysicalVerifyImagesViewModel(
         index: Int,
         comment: String,
     ) {
-        if (_uiState.value.isReadOnly) return
         _uiState.update { state ->
             state.copy(
                 images =
                     state.images.mapIndexed { i, item ->
-                        if (i == index) item.copy(comment = comment) else item
+                        if (i == index && !item.isReadOnly) item.copy(comment = comment) else item
                     },
             )
         }
@@ -128,39 +133,31 @@ class PhysicalVerifyImagesViewModel(
         val state = _uiState.value
         if (!state.canSubmit) return
         val submissionId = state.submissionId ?: return
-        val overallStatus =
-            if (state.images.any { it.action == VerificationAction.NOT_RECOMMENDED }) {
-                VERIFICATION_STATUS_REJECTED
-            } else {
-                VERIFICATION_STATUS_APPROVED
-            }
-        val combinedComments =
-            state.images
-                .mapIndexedNotNull { index, item ->
-                    item.comment.takeIf { it.isNotBlank() }?.let { "Image ${index + 1}: $it" }
-                }.joinToString("\n")
         viewModelScope.launch {
             _uiState.update { it.copy(isSubmitting = true) }
             val session = sessionStorage.session.first()
-            val result =
-                verifierApi.verifierAction(
-                    submissionId = submissionId,
-                    hospId = hospital.hospitalId,
-                    specialityId = speciality.id,
-                    serviceId = service.id,
-                    verificationStatus = overallStatus,
-                    comments = combinedComments,
-                    verifiedBy = session?.userId.orEmpty(),
-                )
-            when (result) {
-                is ApiResult.Success -> {
-                    _uiState.update { it.copy(isSubmitting = false, submitted = true) }
-                    toastController.success("Verification submitted for ${service.name}")
+            val verifiedBy = session?.userId.orEmpty()
+            val results =
+                state.pendingImages.mapNotNull { item ->
+                    val imageId = item.image.imageId ?: return@mapNotNull null
+                    val action = item.action ?: return@mapNotNull null
+                    verifierApi.verifierAction(
+                        submissionId = submissionId,
+                        hospId = hospital.hospitalId,
+                        specialityId = speciality.id,
+                        serviceId = service.id,
+                        imageId = imageId,
+                        verificationStatus = statusFor(action),
+                        comments = item.comment,
+                        verifiedBy = verifiedBy,
+                    )
                 }
-                is ApiResult.Error -> {
-                    _uiState.update { it.copy(isSubmitting = false) }
-                    toastController.error("Could not submit verification. Please try again.")
-                }
+            if (results.isNotEmpty() && results.all { it is ApiResult.Success }) {
+                _uiState.update { it.copy(isSubmitting = false, submitted = true) }
+                toastController.success("Verification submitted for ${service.name}")
+            } else {
+                _uiState.update { it.copy(isSubmitting = false) }
+                toastController.error("Could not submit verification. Please try again.")
             }
         }
     }

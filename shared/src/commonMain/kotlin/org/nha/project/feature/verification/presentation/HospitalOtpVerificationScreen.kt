@@ -2,7 +2,9 @@ package org.nha.project.feature.verification.presentation
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -57,6 +60,7 @@ fun HospitalOtpVerificationScreen(
         onBack = onBack,
         onOtpChange = viewModel::updateOtp,
         onSubmit = viewModel::submitOtp,
+        onResend = viewModel::resendOtp,
         onDismissResult = viewModel::dismissResult,
         onVerified = onVerified,
     )
@@ -69,6 +73,7 @@ private fun HospitalOtpVerificationContent(
     onBack: () -> Unit,
     onOtpChange: (String) -> Unit,
     onSubmit: () -> Unit,
+    onResend: () -> Unit,
     onDismissResult: () -> Unit,
     onVerified: () -> Unit,
 ) {
@@ -110,6 +115,31 @@ private fun HospitalOtpVerificationContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 OtpInputFields(value = state.otp, onValueChange = onOtpChange, length = OTP_LENGTH)
 
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Didn't receive the OTP? ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                    )
+                    if (state.canResend) {
+                        Text(
+                            text = "Resend OTP",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HemPrimary,
+                            fontWeight = FontWeight.Bold,
+                            textDecoration = TextDecoration.Underline,
+                            modifier = Modifier.clickable(onClick = onResend),
+                        )
+                    } else {
+                        Text(
+                            text = "Resend in ${formatCooldown(state.resendSecondsRemaining)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
                 Button(
                     onClick = onSubmit,
@@ -144,6 +174,12 @@ private fun HospitalOtpVerificationContent(
             )
         null -> Unit
     }
+}
+
+private fun formatCooldown(totalSeconds: Int): String {
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "$minutes:${seconds.toString().padStart(2, '0')}"
 }
 
 @Composable
@@ -204,6 +240,7 @@ private fun HospitalOtpVerificationScreenPreview() {
             onBack = {},
             onOtpChange = {},
             onSubmit = {},
+            onResend = {},
             onDismissResult = {},
             onVerified = {},
         )

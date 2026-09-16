@@ -7,6 +7,8 @@ data class HospitalLocationVerificationUiState(
     val isLoading: Boolean = true,
     val currentLocation: GeoPoint? = null,
     val distanceMeters: Double? = null,
+    val hfrLocationLabel: String? = null,
+    val currentLocationLabel: String? = null,
 ) {
     val isWithinRange: Boolean get() = distanceMeters != null && distanceMeters <= MAX_ALLOWED_DISTANCE_METERS
 }

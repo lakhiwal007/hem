@@ -16,4 +16,6 @@ data class Hospital(
     val hfrLocation: GeoPoint,
     val hfrId: String = "",
     val schemeCode: String = "PMJAY",
+    val stateCode: String? = null,
+    val districtCode: String? = null,
 )

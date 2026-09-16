@@ -141,7 +141,10 @@ private fun HospitalLocationVerificationContent(
                             color = HemPrimary,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        CoordinateCard(placeLabel = "Delhi, India", point = hospital.hfrLocation)
+                        CoordinateCard(
+                            placeLabel = hospital.name,
+                            point = hospital.hfrLocation,
+                        )
 
                         val currentLocation = state.currentLocation
                         if (currentLocation != null) {
@@ -154,7 +157,9 @@ private fun HospitalLocationVerificationContent(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             CoordinateCard(
-                                placeLabel = "Delhi, India",
+                                placeLabel =
+                                    state.currentLocationLabel ?: state.hfrLocationLabel
+                                        ?: hospital.description,
                                 point = currentLocation,
                                 distanceMeters = state.distanceMeters,
                             )

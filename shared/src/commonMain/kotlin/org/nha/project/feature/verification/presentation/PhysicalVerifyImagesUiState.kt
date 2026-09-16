@@ -7,6 +7,7 @@ data class ImageVerification(
     val image: UploadedImage,
     val action: VerificationAction? = null,
     val comment: String = "",
+    val isReadOnly: Boolean = false,
 )
 
 data class PhysicalVerifyImagesUiState(
@@ -16,16 +17,15 @@ data class PhysicalVerifyImagesUiState(
     val submissionId: Long? = null,
     val images: List<ImageVerification> = emptyList(),
     val submitted: Boolean = false,
-    val isReadOnly: Boolean = false,
-    val decidedAction: VerificationAction? = null,
-    val decidedComments: String? = null,
 ) {
+    val pendingImages: List<ImageVerification> get() = images.filterNot { it.isReadOnly }
+
+    val allReviewed: Boolean get() = images.isNotEmpty() && pendingImages.isEmpty()
+
     val canSubmit: Boolean
         get() =
-            !isReadOnly &&
-                submissionId != null &&
+            submissionId != null &&
                 !isSubmitting &&
-                images.isNotEmpty() &&
-                images.all { it.action != null } &&
-                images.any { it.comment.isNotBlank() }
+                pendingImages.isNotEmpty() &&
+                pendingImages.all { it.action != null && it.comment.isNotBlank() }
 }

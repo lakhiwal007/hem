@@ -2,6 +2,7 @@ package org.nha.project.feature.verification.presentation
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -96,17 +97,11 @@ fun VerifyAccordionContent(
                 color = Color.Gray,
             )
 
-            if (state.isReadOnly) {
-                Spacer(modifier = Modifier.height(12.dp))
-                VerificationDecidedBanner(action = state.decidedAction, comments = state.decidedComments)
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 state.images.forEachIndexed { index, item ->
                     VerifiableImageRow(
                         item = item,
-                        enabled = !state.isReadOnly,
                         onZoom = { zoomedImage = item.image },
                         onActionChange = { viewModel.updateImageAction(index, it) },
                         onCommentChange = { viewModel.updateImageComment(index, it) },
@@ -114,8 +109,15 @@ fun VerifyAccordionContent(
                 }
             }
 
-            if (!state.isReadOnly) {
-                Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+            if (state.allReviewed) {
+                Text(
+                    text = "All images already reviewed.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = HemSuccess,
+                )
+            } else {
                 Button(
                     onClick = viewModel::submit,
                     enabled = state.canSubmit,
@@ -138,21 +140,20 @@ fun VerifyAccordionContent(
 @Composable
 private fun VerifiableImageRow(
     item: ImageVerification,
-    enabled: Boolean,
     onZoom: () -> Unit,
     onActionChange: (VerificationAction) -> Unit,
     onCommentChange: (String) -> Unit,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        UploadedImageThumbnail(image = item.image, onZoom = onZoom)
+        UploadedImageThumbnail(image = item.image, action = item.action, onZoom = onZoom)
         Column(modifier = Modifier.weight(1f)) {
-            ActionDropdown(selected = item.action, enabled = enabled, onSelected = onActionChange)
+            ActionDropdown(selected = item.action, enabled = !item.isReadOnly, onSelected = onActionChange)
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = item.comment,
                 onValueChange = onCommentChange,
-                enabled = enabled,
-                placeholder = { Text("Comment") },
+                enabled = !item.isReadOnly,
+                placeholder = { Text("Comment*") },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(10.dp),
             )
@@ -163,22 +164,36 @@ private fun VerifiableImageRow(
 @Composable
 private fun UploadedImageThumbnail(
     image: UploadedImage,
+    action: VerificationAction?,
     onZoom: () -> Unit,
 ) {
-    Box(modifier = Modifier.size(96.dp)) {
+    val ringColor =
+        when (action) {
+            VerificationAction.RECOMMENDED -> HemSuccess
+            VerificationAction.NOT_RECOMMENDED -> HemError
+            null -> null
+        }
+    Box(
+        modifier =
+            Modifier
+                .size(96.dp)
+                .let {
+                    if (ringColor != null) it.border(2.dp, ringColor, RoundedCornerShape(10.dp)) else it
+                }.padding(if (ringColor != null) 3.dp else 0.dp),
+    ) {
         val base64 = image.base64
         if (base64 != null) {
             Base64Image(
                 base64 = base64,
                 contentDescription = image.label,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Image(
                 painter = painterResource(image.drawable),
                 contentDescription = image.label,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop,
             )
         }
@@ -287,43 +302,6 @@ private fun ActionDropdown(
     }
 }
 
-@Composable
-private fun VerificationDecidedBanner(
-    action: VerificationAction?,
-    comments: String?,
-) {
-    val (label, color) =
-        when (action) {
-            VerificationAction.RECOMMENDED -> "Already approved" to HemSuccess
-            VerificationAction.NOT_RECOMMENDED -> "Already rejected" to HemError
-            null -> "Already verified" to HemFocusBorder
-        }
-    Column {
-        Box(
-            modifier =
-                Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(color.copy(alpha = 0.1f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = color,
-            )
-        }
-        if (!comments.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = comments,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-            )
-        }
-    }
-}
-
 @Preview
 @Composable
 private fun VerifyAccordionContentPreview() {
@@ -331,7 +309,6 @@ private fun VerifyAccordionContentPreview() {
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
             VerifiableImageRow(
                 item = ImageVerification(image = UploadedImage("Image 1", Res.drawable.zoom)),
-                enabled = true,
                 onZoom = {},
                 onActionChange = {},
                 onCommentChange = {},

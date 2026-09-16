@@ -52,6 +52,7 @@ data class VerifierActionRequest(
     val verificationStatus: String,
     val comments: String,
     val verifiedBy: String,
+    val imageId: Long,
 )
 
 @Serializable
@@ -61,6 +62,44 @@ data class VerifierActionResponseDto(
     val comments: String? = null,
     val verifiedBy: String? = null,
     val verifiedOn: String? = null,
+)
+
+@Serializable
+data class SubmissionVerificationStatusDto(
+    val submissionId: Long? = null,
+    val submissionVersion: Int? = null,
+    val status: String? = null,
+    val images: List<ImageVerificationStatusDto> = emptyList(),
+)
+
+@Serializable
+data class ImageVerificationStatusDto(
+    val imageId: Long? = null,
+    val imageSlot: Int? = null,
+    val imageUrl: String? = null,
+    val pvReview: ReviewDto? = null,
+    val decReview: ReviewDto? = null,
+    val secReview: ReviewDto? = null,
+)
+
+@Serializable
+data class ReviewDto(
+    val status: String? = null,
+    val comments: String? = null,
+    val reviewedBy: String? = null,
+    val reviewedOn: String? = null,
+)
+
+@Serializable
+data class VerifierErrorBody(
+    val error: VerifierErrorDetail? = null,
+)
+
+@Serializable
+data class VerifierErrorDetail(
+    val errorcode: Int? = null,
+    val error: String? = null,
+    val errorMessage: List<String>? = null,
 )
 
 fun List<VerifierWorklistItemDto>.toHospitals(): List<Hospital> = mapNotNull { it.toHospital() }

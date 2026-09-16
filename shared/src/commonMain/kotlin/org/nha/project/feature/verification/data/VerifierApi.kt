@@ -57,6 +57,7 @@ class VerifierApi(
         hospId: Long,
         specialityId: Long,
         serviceId: Long,
+        imageId: Long,
         verificationStatus: String,
         comments: String,
         verifiedBy: String,
@@ -75,13 +76,14 @@ class VerifierApi(
                             verificationStatus = verificationStatus,
                             comments = comments,
                             verifiedBy = verifiedBy,
+                            imageId = imageId,
                         ),
                     ),
                 )
             }
         }
 
-    suspend fun getVerificationStatus(submissionId: Long): ApiResult<VerifierActionResponseDto> =
+    suspend fun getVerificationStatus(submissionId: Long): ApiResult<SubmissionVerificationStatusDto> =
         request { session ->
             httpClient.get(VerifierApiUrls.VERIFICATION_STATUS) {
                 applyHemHeaders(session)
@@ -100,9 +102,20 @@ class VerifierApi(
                     ApiResult.Error(NetworkException.Unknown(e))
                 }
             } else {
-                ApiResult
-                    .Error(NetworkException.ServerError(response.status.value, response.bodyAsText()))
-                    .also { notifyIfUnauthorized(it, session) }
+                val bodyText = response.bodyAsText()
+                val exception =
+                    if (response.status.value == 401) {
+                        NetworkException.ServerError(response.status.value, bodyText)
+                    } else {
+                        val serverMessage =
+                            runCatching { json.decodeFromString<VerifierErrorBody>(bodyText) }
+                                .getOrNull()
+                                ?.error
+                                ?.let { it.error ?: it.errorMessage?.firstOrNull() }
+                        serverMessage?.let { NetworkException.ApiError(code = null, serverMessage = it) }
+                            ?: NetworkException.ServerError(response.status.value, bodyText)
+                    }
+                ApiResult.Error(exception).also { notifyIfUnauthorized(it, session) }
             }
         } catch (e: Exception) {
             ApiResult.Error(NetworkException.Unknown(e))
