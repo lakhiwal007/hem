@@ -17,6 +17,8 @@ import org.nha.project.core.location.CurrentLocationProvider
 import org.nha.project.core.location.LocationAccessChecker
 import org.nha.project.core.location.ReverseGeocoder
 import org.nha.project.core.network.CertificatePins
+import org.nha.project.core.security.rasp.AndroidRaspDetector
+import org.nha.project.core.security.rasp.RaspDetector
 import org.nha.project.core.storage.AppDatabase
 import org.nha.project.core.storage.getDatabaseBuilder
 import org.nha.project.core.storage.getRoomDatabase
@@ -43,4 +45,5 @@ actual val platformModule: Module =
         single<ReverseGeocoder> { AndroidReverseGeocoder(get()) }
         single<ImageMetadataStamper> { AndroidImageMetadataStamper(get()) }
         single<ImageEditor> { AndroidImageEditor() }
+        single<RaspDetector> { AndroidRaspDetector(get()) }
     }

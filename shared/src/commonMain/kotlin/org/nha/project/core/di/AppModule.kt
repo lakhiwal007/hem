@@ -13,4 +13,5 @@ val appModules: List<Module> =
         hospitalModule,
         captureModule,
         verificationModule,
+        securityModule,
     )

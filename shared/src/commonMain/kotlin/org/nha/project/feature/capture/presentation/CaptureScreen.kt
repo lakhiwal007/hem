@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -459,7 +460,7 @@ private fun ImagePreviewDialog(
             )
             ImageMetadataOverlay(
                 image = image,
-                modifier = Modifier.align(Alignment.BottomStart).padding(24.dp),
+                modifier = Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(24.dp),
             )
             Box(
                 modifier =

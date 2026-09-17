@@ -31,6 +31,7 @@ val generateAppSecrets by tasks.registering {
         val idamKey = props.getProperty("IDAM_KEY", "")
         val idamKey2 = props.getProperty("IDAM_KEY2", "")
         val logoutSessionKey = props.getProperty("LOGOUT_SESSION_KEY", "")
+        val test1Key = props.getProperty("TEST_1", "")
         val packageDir = outputDir.get().asFile.resolve("org/nha/project/core/secrets")
         packageDir.mkdirs()
         packageDir.resolve("AppSecrets.kt").writeText(
@@ -41,6 +42,7 @@ val generateAppSecrets by tasks.registering {
             |    const val IDAM_KEY: String = "$idamKey"
             |    const val IDAM_KEY2: String = "$idamKey2"
             |    const val LOGOUT_SESSION_KEY: String = "$logoutSessionKey"
+            |    const val TEST_1: String = "$test1Key"
             |}
             |
             """.trimMargin(),

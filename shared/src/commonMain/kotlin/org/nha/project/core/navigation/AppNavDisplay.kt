@@ -22,6 +22,7 @@ import org.nha.project.core.location.HospitalDistanceGuard
 import org.nha.project.core.location.LocationGuard
 import org.nha.project.core.network.ApiResult
 import org.nha.project.core.network.NetworkGuard
+import org.nha.project.core.security.rasp.RaspGuard
 import org.nha.project.feature.auth.data.AuthApi
 import org.nha.project.feature.auth.data.SessionStorage
 import org.nha.project.feature.auth.domain.isPhysicalVerifier
@@ -93,100 +94,102 @@ fun AppNavDisplay() {
 
     val currentRoute = backStack.lastOrNull() as? Route
 
-    NetworkGuard(currentRoute = currentRoute) {
-        LocationGuard(currentRoute = currentRoute) {
-            HospitalDistanceGuard(
-                currentRoute = currentRoute,
-                onExitToHospitalList = {
-                    backStack.clear()
-                    backStack.add(Route.HospitalList)
-                },
-            ) {
-                NavDisplay(
-                    backStack = backStack,
-                    entryDecorators =
-                        listOf(
-                            rememberSaveableStateHolderNavEntryDecorator(),
-                            rememberViewModelStoreNavEntryDecorator(),
-                        ),
-                    entryProvider =
-                        entryProvider {
-                            entry<Route.Splash> {
-                                SplashScreen(
-                                    onTimeout = {
-                                        backStack.clear()
-                                        backStack.add(Route.LocationPermission)
-                                    },
-                                )
-                            }
-                            entry<Route.LocationPermission> {
-                                LocationPermissionScreen(
-                                    onContinue = {
-                                        coroutineScope.launch {
-                                            val isLoggedIn = sessionStorage.isLoggedIn.first()
+    RaspGuard {
+        NetworkGuard(currentRoute = currentRoute) {
+            LocationGuard(currentRoute = currentRoute) {
+                HospitalDistanceGuard(
+                    currentRoute = currentRoute,
+                    onExitToHospitalList = {
+                        backStack.clear()
+                        backStack.add(Route.HospitalList)
+                    },
+                ) {
+                    NavDisplay(
+                        backStack = backStack,
+                        entryDecorators =
+                            listOf(
+                                rememberSaveableStateHolderNavEntryDecorator(),
+                                rememberViewModelStoreNavEntryDecorator(),
+                            ),
+                        entryProvider =
+                            entryProvider {
+                                entry<Route.Splash> {
+                                    SplashScreen(
+                                        onTimeout = {
                                             backStack.clear()
-                                            backStack.add(if (isLoggedIn) Route.HospitalList else Route.Login)
-                                        }
-                                    },
-                                )
-                            }
-                            entry<Route.Login> {
-                                LoginScreen(onLoginSuccess = { backStack.add(Route.HospitalList) })
-                            }
-                            entry<Route.HospitalList> {
-                                HospitalListScreen(
-                                    onHospitalClick = { hospital ->
-                                        backStack.add(Route.HospitalLocationVerification(hospital))
-                                    },
-                                    onLogout = {
-                                        backStack.clear()
-                                        backStack.add(Route.Login)
-                                    },
-                                )
-                            }
-                            entry<Route.HospitalLocationVerification> { route ->
-                                HospitalLocationVerificationScreen(
-                                    hospital = route.hospital,
-                                    onCancel = { backStack.removeLastOrNull() },
-                                    onContinue = {
-                                        backStack.add(
-                                            if (isPhysicalVerifier) {
-                                                Route.HospitalOtpVerification(route.hospital)
-                                            } else {
-                                                Route.HospitalSpecialities(route.hospital)
-                                            },
-                                        )
-                                    },
-                                )
-                            }
-                            entry<Route.HospitalOtpVerification> { route ->
-                                HospitalOtpVerificationScreen(
-                                    hospital = route.hospital,
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onVerified = { backStack.add(Route.HospitalSpecialities(route.hospital)) },
-                                )
-                            }
-                            entry<Route.HospitalSpecialities> { route ->
-                                HospitalSpecialitiesScreen(
-                                    hospital = route.hospital,
-                                    onBack = { backStack.removeLastOrNull() },
-                                    onSpecialityClick = { speciality ->
-                                        backStack.add(Route.HospitalServices(route.hospital, speciality))
-                                    },
-                                )
-                            }
-                            entry<Route.HospitalServices> { route ->
-                                HospitalServicesScreen(
-                                    hospital = route.hospital,
-                                    speciality = route.speciality,
-                                    onBack = { backStack.removeLastOrNull() },
-                                )
-                            }
-                            entry<Route.Status> {
-                                HospitalStatusScreen()
-                            }
-                        },
-                )
+                                            backStack.add(Route.LocationPermission)
+                                        },
+                                    )
+                                }
+                                entry<Route.LocationPermission> {
+                                    LocationPermissionScreen(
+                                        onContinue = {
+                                            coroutineScope.launch {
+                                                val isLoggedIn = sessionStorage.isLoggedIn.first()
+                                                backStack.clear()
+                                                backStack.add(if (isLoggedIn) Route.HospitalList else Route.Login)
+                                            }
+                                        },
+                                    )
+                                }
+                                entry<Route.Login> {
+                                    LoginScreen(onLoginSuccess = { backStack.add(Route.HospitalList) })
+                                }
+                                entry<Route.HospitalList> {
+                                    HospitalListScreen(
+                                        onHospitalClick = { hospital ->
+                                            backStack.add(Route.HospitalLocationVerification(hospital))
+                                        },
+                                        onLogout = {
+                                            backStack.clear()
+                                            backStack.add(Route.Login)
+                                        },
+                                    )
+                                }
+                                entry<Route.HospitalLocationVerification> { route ->
+                                    HospitalLocationVerificationScreen(
+                                        hospital = route.hospital,
+                                        onCancel = { backStack.removeLastOrNull() },
+                                        onContinue = {
+                                            backStack.add(
+                                                if (isPhysicalVerifier) {
+                                                    Route.HospitalOtpVerification(route.hospital)
+                                                } else {
+                                                    Route.HospitalSpecialities(route.hospital)
+                                                },
+                                            )
+                                        },
+                                    )
+                                }
+                                entry<Route.HospitalOtpVerification> { route ->
+                                    HospitalOtpVerificationScreen(
+                                        hospital = route.hospital,
+                                        onBack = { backStack.removeLastOrNull() },
+                                        onVerified = { backStack.add(Route.HospitalSpecialities(route.hospital)) },
+                                    )
+                                }
+                                entry<Route.HospitalSpecialities> { route ->
+                                    HospitalSpecialitiesScreen(
+                                        hospital = route.hospital,
+                                        onBack = { backStack.removeLastOrNull() },
+                                        onSpecialityClick = { speciality ->
+                                            backStack.add(Route.HospitalServices(route.hospital, speciality))
+                                        },
+                                    )
+                                }
+                                entry<Route.HospitalServices> { route ->
+                                    HospitalServicesScreen(
+                                        hospital = route.hospital,
+                                        speciality = route.speciality,
+                                        onBack = { backStack.removeLastOrNull() },
+                                    )
+                                }
+                                entry<Route.Status> {
+                                    HospitalStatusScreen()
+                                }
+                            },
+                    )
+                }
             }
         }
     }
